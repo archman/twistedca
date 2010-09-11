@@ -1,0 +1,1338 @@
+#LyX 1.6.6.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\language english
+\inputencoding auto
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\paperfontsize default
+\spacing single
+\use_hyperref true
+\pdf_bookmarks true
+\pdf_bookmarksnumbered true
+\pdf_bookmarksopen true
+\pdf_bookmarksopenlevel 3
+\pdf_breaklinks true
+\pdf_pdfborder false
+\pdf_colorlinks true
+\pdf_backref false
+\pdf_pdfusetitle true
+\pdf_quoted_options "linkcolor=blue"
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+PV Name Service
+\end_layout
+
+\begin_layout Section
+Purpose
+\end_layout
+
+\begin_layout Standard
+The PV Name Protocol allows client (IOCs) to provide EPICS record names
+ to a name server.
+ It also allows several name servers to replicate the name mapping.
+\end_layout
+
+\begin_layout Section
+Conversations
+\end_layout
+
+\begin_layout Subsection
+Client provides names
+\end_layout
+
+\begin_layout Standard
+The client first connects to the server
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> PV NAME PROTO 1 0
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< PV NAME PROTO 1 0
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< GENBOOTID
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> GENBOOTID DSL34FJ
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REGISTER DSL34FJ 192.168.1.15 5064
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> ACCEPTED DSL34FJ 140
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< IAM DSL34FJ Cell 13 Vacuum
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> HELLO
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ADD DSL34FJ
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< test:pv1
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< test:pv2
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< test:pv3
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> ADDED DSL34FJ 144
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+At this point the client is free to disconnect.
+ Entries will presist until spoiled or replaced.
+\end_layout
+
+\begin_layout Subsection
+New Server
+\end_layout
+
+\begin_layout Standard
+A new server joins the cluster.
+ It picks the boot id 
+\series bold
+SFD4SF
+\series default
+.
+ The peer it is connecting to is 
+\series bold
+SFNDO45
+\series default
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> PV NAME PROTO 1 0
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< PV NAME PROTO 1 0
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> SERVERS LIST
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< SERVERS 1404
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 192.168.1.140 7000 SFNDO45
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 192.168.1.240 7000 U43SFD4
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REGISTER SFD4SF 192.168.1.145 7000
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> ACCEPTED SFD4SF 1404
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH BEGIN
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> AUTH USING HMAC+SHA224 HELLOWORLD
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH VALIDATE F3B4CCB9370268EBD3...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH OK
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> REPLICATE 0
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATE
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 5064 192.168.1.15 DSL34FJ test:pv1
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 5064 192.168.1.15 DSL34FJ test:pv2
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 5064 192.168.1.15 DSL34FJ test:pv3
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATED 1420
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< BEGIN FORWARD
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> BEGIN AFTER 1422
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< FORWORD SFNDO45 1423
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< FROM 192.168.1.15 5064
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< MAC 4ABE99823E...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ADD DSL34FJ
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< another:pv
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> REPLICATE 1420
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATE
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 5064 192.168.1.15 DSL34FJ another:pv
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATED 1423
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Protocol Messages
+\end_layout
+
+\begin_layout Subsection
+Misc
+\end_layout
+
+\begin_layout Subsubsection
+Version
+\end_layout
+
+\begin_layout Standard
+Must be the first message sent by both client and server.
+ If any other message is received then the recipient must close the connection.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> PV NAME PROTO 1 0
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Request boot id
+\end_layout
+
+\begin_layout Standard
+Some clients may not have enough entropy at boot time to generate a sufficiently
+ random bootid.
+ A client can instead ask a name server to generate one.
+\end_layout
+
+\begin_layout Standard
+Note: This message is not forwarded be any server.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+bootid := [A-Z0-9]+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> GENBOOTID
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< GENBOOTID <bootid>
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Clients
+\end_layout
+
+\begin_layout Subsubsection
+Client Registration
+\end_layout
+
+\begin_layout Standard
+The new client presents it's boot ID.
+\end_layout
+
+\begin_layout Standard
+A server can forward register message, but only the server which receives
+ the request directly can reply.
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+hostname   = [^
+\backslash
+s]+
+\end_layout
+
+\begin_layout Plain Layout
+
+ip         = ([0-9]{3}
+\backslash
+.){4,8}
+\end_layout
+
+\begin_layout Plain Layout
+
+port       = [0-9]{1,6}
+\end_layout
+
+\begin_layout Plain Layout
+
+sequenceid = [0-9]+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> REGISTER <bootid> <hostname|ip> <port>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ACCEPTED <bootid> <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REJECTED <bootid>
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Client Identifies
+\end_layout
+
+\begin_layout Standard
+Allows an IOC to attach a symbolic name to its boot id.
+ The name can persist between reboots
+\end_layout
+
+\begin_layout Standard
+Note: duplicate names are allowed
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+clientname = [^
+\backslash
+n
+\backslash
+r]+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> IAM <bootid> <clientname>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< HELLO
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Client Lookup
+\end_layout
+
+\begin_layout Standard
+Request client based on name or bootid.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> WHOIS BOOTID <bootid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> WHOIS CLIENT <clientname>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< CLIENTS <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< <port> <hostname|ip> <bootid> <clientname>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Spoil a Client
+\end_layout
+
+\begin_layout Standard
+Indicate that the record for the given boot id are not longer valid.
+\end_layout
+
+\begin_layout Standard
+Note: This message will only be accepted from authenticated clients and
+ the host+port which registered the boot id.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> SPOIL <bootid>[ recordname]
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Servers
+\end_layout
+
+\begin_layout Subsubsection
+Authentication
+\end_layout
+
+\begin_layout Standard
+The peer requests to be authenticated as a server.
+ Peers which fail an authenticate attempt should be disconnected.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+method    = [^
+\backslash
+s]+
+\end_layout
+
+\begin_layout Plain Layout
+
+authtoken = [A-Z0-9]+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> AUTH START
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH USING <method> <authtoken>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+>> AUTH VALIDATE <authtoken>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH OK
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< AUTH FAIL
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+List servers
+\end_layout
+
+\begin_layout Standard
+Request a list of all known name servers.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> SERVERS LIST
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< SERVERS <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< <hostname|ip> <port>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< <hostname|ip> <port>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Request Replication
+\end_layout
+
+\begin_layout Standard
+Request a list of all entries updated between the given sequence id and
+ the current.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> REPLICATE <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATE
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< <port> <hostname|ip> <bootid> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< REPLICATED <sequenceid>
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Control Forward
+\end_layout
+
+\begin_layout Standard
+Used by servers to control replication message forwarding.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+<< BEGIN FORWARD
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> BEGIN AFTER <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< END FORWARD
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> END FORWARD
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Forward
+\end_layout
+
+\begin_layout Standard
+A replication forward from one server to another.
+ Takes the form of a header prepended to each message.
+\end_layout
+
+\begin_layout Standard
+Each recipient must check all forward tags attached to a message it wishes
+ to forward.
+ It may only forward a message if it has not already done some
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+FORWORD <forwarder_bootid> <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+FROM <hostname|ip> <port>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+MAC <authtoken>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<forwarded_message>
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Events
+\end_layout
+
+\begin_layout Standard
+Messages about interesting events.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+EVENT <bootid> <sequenceid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Record Names
+\end_layout
+
+\begin_layout Subsubsection
+Add Names
+\end_layout
+
+\begin_layout Standard
+A client presents record names which it exposes.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> ADD <bootid>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ADDED <bootid> <sequenceid>
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Lookup Names
+\end_layout
+
+\begin_layout Standard
+Request a lookup of the given names
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+>> LOOKUP
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+>> 
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+<< NAMES
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< <port> <hostname|ip> <bootid> <record name>
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< ...
+\backslash
+n
+\end_layout
+
+\begin_layout Plain Layout
+
+<< 
+\backslash
+n
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
