@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from defs import DBF
+from defs import *
 
 class CAError(Exception):
     def __init__(self, msg):
@@ -51,7 +51,7 @@ class PV(object):
 
 class StringPV(PV):
     def __init__(self, name, value=''):
-        PV.__init__(self, name, DBF['string'] , 1)
+        PV.__init__(self, name, DBF_STRING , 1)
         self.val=value
 
     def get(self, channel, dtype, count):
