@@ -1,15 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import asyncore
+import asyncore, logging
 #from util.timer import Queue, Timer
-import cas.endpoint as endpoint
+from cas.server import Server
 
 def main():
     
-    p = endpoint.UDPpeer(('localhost',5064))
+    p = Server(names=['test'])
     
     asyncore.loop()
 
 if __name__=='__main__':
+    logging.basicConfig(format='%(message)s',level=logging.DEBUG)
     main()

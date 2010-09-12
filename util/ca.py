@@ -2,14 +2,20 @@
 
 from struct import Struct
 
+__all__ = ['CAmessage', 'packSearchBody']
+
 header = Struct('!HHHHII')
 header_extend = Struct ('!II')
 
+searchbody=Struct('!Hxxxxxx')
+
+packSearchBody=searchbody.pack
+
 class CAmessage(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, body='', **kwargs):
         parts = ['cmd','size','dtype','count','p1','p2']
-        self.body=kwargs.get('body','')
+        self.body=body
         for arg, val in kwargs.iteritems():
             if arg not in parts:
                 raise AttributeError('Invalid keyword '+arg)
@@ -45,5 +51,5 @@ class CAmessage(object):
         self.p1, self.p2) + self.body
 
     def __repr__(self):
-        return 'Type: %(cmd)d %(size)d %(dtype)x %(count)d %(p1)x %(p2)x %(body)s'%\
+        return 'Type: %(cmd)d %(size)d %(dtype)x %(count)d %(p1)x %(p2)x "%(body)s"'%\
             self.__dict__
