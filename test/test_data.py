@@ -60,7 +60,7 @@ class TestcaValue(unittest.TestCase):
         val.severity=0x1020
         val.stamp=1284327459.1030619
 
-        one, count=val.tostring(defs.DBR_PLAIN, 1)
+        one, count=val.tostring(defs.DBR_STRING, 1)
         self.assertEqual(count, 1)
         self.assertEqual(one, 'hello world'+('\0'*29))
 

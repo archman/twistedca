@@ -3,6 +3,7 @@
 import logging
 from pv import CAError
 from util.ca import CAmessage, padString, packCAerror
+from defs import ECA_NORMAL
 
 log=logging.getLogger('cas.channel')
 
@@ -31,15 +32,24 @@ class Channel(object):
     def readnotify(self, pkt, peer, circuit):
         log.debug('Read from test')
         try:
-            data=self.pv.get(self, pkt.dtype, pkt.count)
-            data=padString(data)
+            data, count=self.pv.get(self, pkt.dtype, pkt.count)
+            print 'data',len(data),repr(data)
             
             pkt.cmd=15
             pkt.size=len(data)
+            pkt.count=count
+            pkt.p1=ECA_NORMAL
             pkt.body=data
-            self.circuit.send(pkt.pack())
         except CAError,e:
             log.exception('Read failed')
+            pkt.size=0
+            pkt.count=0
+            pkt.body=''
+            
+
+        raw=pkt.pack()
+        print 'send',repr(raw)
+        self.circuit.send(raw)
             
 
     def dispatch(self, pkt, peer, circuit):

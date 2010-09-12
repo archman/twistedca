@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from defs import *
+from cadata import caValue
 
 class CAError(Exception):
     def __init__(self, msg):
@@ -52,15 +53,18 @@ class PV(object):
 class StringPV(PV):
     def __init__(self, name, value=''):
         PV.__init__(self, name, DBF_STRING , 1)
-        self.val=value
+        self.data=caValue(DBF_STRING)
+        self.data.value=[value]
 
     def get(self, channel, dtype, count):
-        if dtype!=DBF['string']:
+        dbf, meta = dbr_to_dbf(dtype)
+        if dbf!=DBF_STRING:
             raise CAError("Unsupported type conversion")
-        return self.val
+        return self.data.tostring(dtype, count)
 
     def set(self, channel, data, dtype, count):
-        if dtype!=DBF['string']:
+        dbf, meta = dbr_to_dbf(dtype)
+        if dbf!=DBF['string']:
             raise CAError("Unsupported type conversion")
         print 'set',self.name,'to',repr(data)
         return True

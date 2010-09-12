@@ -219,7 +219,9 @@ class caValue(object):
             setattr(self, f, (None,None))
         self.strs=[]
 
-    def tostring(self, meta, count):
+    def tostring(self, dbr, count):
+        dbf, meta = defs.dbr_to_dbf(dbr)
+        assert self.dbf==dbf, 'tostring() is serialization, not a value conversion'
         metadata=''
         if meta==defs.DBR_PLAIN:
             pass

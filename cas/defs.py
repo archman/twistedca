@@ -4,6 +4,8 @@ SERVER_PORT=5064
 
 CA_VERSION=12
 
+ECA_NORMAL = 1
+
 # metadata classes
 DBR_PLAIN=0
 DBR_STS=1
