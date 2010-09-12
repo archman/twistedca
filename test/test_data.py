@@ -10,7 +10,7 @@ class TestSerialize(unittest.TestCase):
     
     def test_native(self):
         data=[(defs.DBR_STRING, ['hello world'],
-               'hello world'+('\0'*29)),
+               'hello world'+('\0'*5)),
               (defs.DBR_INT, array('H',[0x1234]), '\x12\x34'),
              ]
 
@@ -62,7 +62,7 @@ class TestcaValue(unittest.TestCase):
 
         one, count=val.tostring(defs.DBR_STRING, 1)
         self.assertEqual(count, 1)
-        self.assertEqual(one, 'hello world'+('\0'*29))
+        self.assertEqual(one, 'hello world'+('\0'*5))
 
 if __name__ == '__main__':
     #import logging

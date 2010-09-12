@@ -34,23 +34,22 @@ class ValueArray(object):
             data.byteswap()
         return data
 
-class caString(Struct):
-    
-    def __init__(self):
-        Struct.__init__(self,'!40s')
+class caString(object):
 
     def pack(self,inp):
         assert not isinstance(inp, str)
         ret=''
         for s in inp:
-            ret=ret+Struct.pack(self,s)
+            ret=ret+padString(s)
         return ret
     
     def unpack(self, bstr):
-        ret=[]
-        for i in range(len(bstr)/40):
-            ret.append(Struct.unpack(self, bstr[i*40:(i+1)*40])[0].rstrip('\0'))
-        return ret
+        #TODO: how is an array of strings actually stored?
+        return [bstr.rstrip('\0')]
+        #ret=[]
+        #for i in range(len(bstr)/40):
+            #ret.append( bstr[i*40:(i+1)*40].rstrip('\0') )
+        #return ret
 
 # value
 dbr_string=caString()
