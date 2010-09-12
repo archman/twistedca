@@ -46,10 +46,13 @@ class PV(object):
         return 'PV %(name)s with %(maxcount)d of %(dtype)d'%self.__dict__
 
 class StringPV(PV):
-    def __init__(self, name, value=''):
+    def __init__(self, name, value=None):
+        import time
         PV.__init__(self, name, DBF_STRING , 1)
         self.data=caValue(DBF_STRING)
-        self.data.value=[value]
+        if value is not None:
+            self.data.value=[value]
+            self.data.stamp=time.time()
 
     def get(self, channel, dtype, count):
         dbf, meta = dbr_to_dbf(dtype)
