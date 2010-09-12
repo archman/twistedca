@@ -12,10 +12,7 @@ searchbody=Struct('!Hxxxxxx')
 packSearchBody=searchbody.pack
 
 def padString(inp):
-    if len(inp)==0:
-        return '\0'*8
-    elif inp[-1:]=='\0':
-        inp=inp+'\0'
+    assert isinstance(inp, str)
     p=len(inp)%8
     if p!=0:
         inp=inp+'\0'*(8-p)

@@ -22,6 +22,18 @@ DBF_CHAR   =4
 DBF_LONG   =5
 DBF_DOUBLE =6
 
+elementsize={DBF_STRING:40,
+             DBF_INT:2,
+             DBF_SHORT:2,
+             DBF_FLOAT:4,
+             DBF_ENUM:2,
+             DBF_CHAR:1,
+             DBF_LONG:4,
+             DBF_DOUBLE:8
+            }
+def dbf_elem_size(dbf):
+    return elementsize[dbf]
+
 DBR_STRING =DBF_STRING
 DBR_INT    =DBF_INT
 DBR_SHORT  =DBF_INT
@@ -110,9 +122,11 @@ DBR2DBF={
     DBR_CTRL_DOUBLE:(DBF_DOUBLE,DBR_CTRL),
     DBR_PUT_ACKT  :(DBF_SHORT,DBR_PLAIN),
     DBR_PUT_ACKS  :(DBF_SHORT,DBR_PLAIN),
-    DBR_STSACK_STRING:(DBF_STSACK_STRING,None),
+    DBR_STSACK_STRING:(DBR_STSACK_STRING,None),
     DBR_CLASS_NAME:(DBF_STRING,DBR_PLAIN),
 }
+def dbr_to_dbf(dbr):
+    return DBR2DBF[dbr]
 
 # compute reverse mapping
 DBF2DBR={}
@@ -120,3 +134,5 @@ for k,v in DBR2DBF.iteritems():
     if v[0] is None:
         continue
     DBF2DBR[v]=k
+def dbf_to_dbr(dbf):
+    return DBF2DBR[dbf]
