@@ -4,6 +4,7 @@ import logging
 from pv import CAError
 from util.ca import CAmessage, padString, packCAerror
 from defs import ECA_NORMAL
+import error
 
 log=logging.getLogger('cas.channel')
 
@@ -38,7 +39,7 @@ class Channel(object):
             pkt.cmd=15
             pkt.size=len(data)
             pkt.count=count
-            pkt.p1=ECA_NORMAL
+            pkt.p1=error.ECA_NORMAL
             pkt.body=data
         except CAError,e:
             log.exception('Read failed')

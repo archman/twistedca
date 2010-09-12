@@ -2,12 +2,7 @@
 
 from defs import *
 from cadata import caValue
-
-class CAError(Exception):
-    def __init__(self, msg):
-        self.msg=msg
-    def __str__(self):
-        return 'CAError: '+str(self.msg)
+from error import CAError
 
 class PV(object):
     
