@@ -7,20 +7,31 @@ from defs import *
 
 class Server(object):
     
-    def __init__(self, interfaces=('localhost',), names=[]):
+    def __init__(self, interfaces=('localhost',), pvs=[]):
         self.udp=[]
         self.tcp=[]
         for i in interfaces:
             self.udp.append(UDPpeer(self.dispatchudp,(i,SERVER_PORT)))
-            self.tcp.append(TCPserver(self.dispatchtcp,(i,SERVER_PORT)))
+            self.tcp.append(TCPserver(self,(i,SERVER_PORT)))
 
         self._udp={0:self.ignore,6:self.nameres}
         self._tcp={}
 
-        self.names=names
+        self.pvs={}
+        for pv in pvs:
+            self.pvs[pv.name]=pv
+        
+        self.closeList=set()
 
     def close(self):
+        # make a copy of the list (not contents)
+        # because calling c() may cause the size
+        # of closeList to change
+        for c in copy(self.closeList):
+            c()
         for ep in self.udp:
+            ep.close()
+        for ep in self.tcp:
             ep.close()
 
     def dispatchudp(self, pkt, peer, endpoint):
@@ -56,4 +67,7 @@ class Server(object):
             
         
     def Lookup(self,name):
-        return name in self.names
+        return name in self.pvs
+
+    def GetPV(self,name):
+        return self.pvs.get(name)

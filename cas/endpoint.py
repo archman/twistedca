@@ -3,14 +3,16 @@
 import asyncore, socket, logging
 from util.udp import UDPdispatcher
 from util.ca import CAmessage
+from channel import Channel
 import defs
+from copy import copy
 
 log=logging.getLogger('cas.endpoint')
 
 class CAcircuit(asyncore.dispatcher_with_send):
     
-    def __init__(self, handler, sock=None, peer=None):
-        self.handler=handler
+    def __init__(self, server, sock=None, peer=None):
+        self.server=server
         asyncore.dispatcher_with_send.__init__(self, sock)
         self.peer=peer
         self.in_buffer=''
@@ -21,11 +23,22 @@ class CAcircuit(asyncore.dispatcher_with_send):
         self.host=None
         
         self._circ={0 :self.caver,
+                    12:self.clearchan,
+                    15:self.forwardchan,
+                    18:self.createchan,
                     20:self.caclient,
                     21:self.cahost}
 
-        self.closeList=[]
-        self.sids=set()
+        self.closeList=set()
+        
+        self.channels={}
+
+        self.next_sid=0
+    
+    def dropchan(self, channel):
+        self.channels.pop(channel.sid)
+
+    # CA actions
 
     def caver(self, pkt, x, y):
         log.debug('Create %s',self)
@@ -56,13 +69,63 @@ class CAcircuit(asyncore.dispatcher_with_send):
         pkt=CAmessage(cmd=0, dtype=self.prio, count=defs.CA_VERSION)
         self.send(pkt.pack())
 
+    def createchan(self, pkt, x, y):
+        # Older clients first report version here
+        self.version=pkt.p2
+
+        name=pkt.body.strip('\0')
+        pv = self.server.GetPV(name)
+
+        if pv is None:
+            # PV does not exist
+            fail = CAmessage(cmd=26, p1=pkt.p1)
+            self.send(fail.pack())
+            return
+
+        chan=Channel(self.next_sid, pkt.p1, self.server, self, pv)
+        self.channels[chan.sid]=chan
+        dtype, maxcount = pv.info(chan)
+
+        ok = CAmessage(cmd=18, dtype=dtype, count=maxcount,
+                       p1=pkt.p1, p2=chan.sid)
+
+        rights = CAmessage(cmd=22, p1=pkt.p1, p2=pv.rights(chan))
+
+        self.send(ok.pack()+rights.pack())
+        
+        self.next_sid=self.next_sid+1
+        while self.next_sid in self.channels:
+            self.next_sid=self.next_sid+1
+
+    def clearchan(self, pkt, x, y):
+        chan=self.channels.get(pkt.p1)
+        if not chan:
+            log.warning('Attempt to clean non-existent channel')
+            return
+        
+        chan.close()
+        ok = CAmessage(cmd=12, p1=pkt.p1, p2=pkt.p2)
+        self.send(ok.pack())
+
+    def forwardchan(self, pkt, peer, circuit):
+        chan=self.channels.get(pkt.p1)
+        if not chan:
+            log.warning('Attempt to access non-existent channel')
+            return
+        chan.dispatch(pkt, peer, circuit)
+
+    # socket operations
+
     def handle_connect(self):
         log.debug('Create %s',self)
 
     def handle_close(self):
         log.debug('Destroy %s',self)
-        self.handler(None, self.peer, self)
-        for c in self.closeList:
+        self.server.dispatchtcp(None, self.peer, self)
+        # make a copy of the list (not contents)
+        # because calling c() may cause the size
+        # of closeList to change
+        for c in copy(self.closeList):
             c()
         self.close()
     
@@ -74,7 +137,7 @@ class CAcircuit(asyncore.dispatcher_with_send):
         
             pkt, msg = CAmessage.unpack(msg)
             
-            hdl = self._circ.get(pkt.cmd, self.handler)
+            hdl = self._circ.get(pkt.cmd, self.server.dispatchtcp)
         
             hdl(pkt, self.peer, self)
 

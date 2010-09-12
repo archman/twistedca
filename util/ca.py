@@ -11,6 +11,22 @@ searchbody=Struct('!Hxxxxxx')
 
 packSearchBody=searchbody.pack
 
+def padString(inp):
+    if len(inp)==0:
+        return '\0'*8
+    elif inp[-1:]=='\0':
+        inp=inp+'\0'
+    p=len(inp)%8
+    if p!=0:
+        inp=inp+'\0'*(8-p)
+    return inp
+
+def packCAerror(cid, sts, msg, pkt):
+    body=pkt.pack()+padString(msg)
+    err=CAmessage(cmd=11, size=len(body),
+                  p1=cid, p2=sts, body=body)
+    return err
+
 class CAmessage(object):
 
     def __init__(self, body='', **kwargs):
