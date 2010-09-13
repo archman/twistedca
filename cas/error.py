@@ -1,11 +1,4 @@
 # -*- coding: utf-8 -*-
-
-class CAError(Exception):
-    def __init__(self, msg, code):
-        self.msg=msg
-        self.code
-    def __str__(self):
-        return 'CAError: '+str(self.msg)
         
 # the following derived from caerr.h in Base
 
@@ -122,3 +115,11 @@ del CA_INSERT_MSG_NO
 del CA_INSERT_SEVERITY
 del CA_INSERT_SUCCESS
 del DEFMSG
+
+
+class CAError(Exception):
+    def __init__(self, msg, code=ECA_INTERNAL):
+        self.msg=msg
+        self.code=code
+    def __str__(self):
+        return 'CAError: '+str(self.msg)

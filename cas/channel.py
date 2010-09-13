@@ -43,9 +43,10 @@ class Channel(object):
             pkt.p1=error.ECA_NORMAL
             pkt.body=data
         except CAError,e:
-            log.exception('Read failed')
+            log.exception('Read failed: '+e.msg)
             pkt.size=0
             pkt.count=0
+            pkt.p1=e.code
             pkt.body=''
             
 

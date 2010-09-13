@@ -2,7 +2,7 @@
 
 from defs import *
 from cadata import caValue
-from error import CAError
+from error import CAError, ECA_NOCONVERT
 
 class PV(object):
     
@@ -57,13 +57,13 @@ class StringPV(PV):
     def get(self, channel, dtype, count):
         dbf, meta = dbr_to_dbf(dtype)
         if dbf!=DBF_STRING:
-            raise CAError("Unsupported type conversion")
+            raise CAError("Unsupported type conversion", ECA_NOCONVERT)
         return self.data.tostring(dtype, count)
 
     def set(self, channel, data, dtype, count):
         dbf, meta = dbr_to_dbf(dtype)
         if dbf!=DBF_STRING:
-            raise CAError("Unsupported type conversion")
+            raise CAError("Unsupported type conversion", ECA_NOCONVERT)
         print self.data.value
         self.data.fromstring(data, dtype, count)
         print self.data.value
