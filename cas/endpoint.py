@@ -30,7 +30,9 @@ class CAcircuit(asyncore.dispatcher_with_send):
                     15:self.forwardchan,
                     18:self.createchan,
                     20:self.caclient,
-                    21:self.cahost}
+                    21:self.cahost,
+                    23:self.ping,
+                   }
 
         self.closeList=set()
         
@@ -116,6 +118,9 @@ class CAcircuit(asyncore.dispatcher_with_send):
             log.warning('Attempt to access non-existent channel')
             return
         chan.dispatch(pkt, peer, circuit)
+
+    def ping(self, pkt, x, y):
+        self.send(pkt.pack())
 
     # socket operations
 
