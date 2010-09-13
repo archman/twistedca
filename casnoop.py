@@ -3,14 +3,16 @@
 
 import asyncore, logging
 #from util.timer import Queue, Timer
-from cas.pv import StringPV
+from cas.pv import BasicPV
 from cas.server import Server
+from cas.defs import DBF_STRING, DBF_LONG
 
 def main():
     
-    test=StringPV('test', value='hello world')
+    test=BasicPV('test', dtype=DBF_STRING, value='hello world')
+    test2=BasicPV('test2', dtype=DBF_LONG, value=42)
     
-    p = Server(pvs=[test])
+    p = Server(pvs=[test,test2])
     
     asyncore.loop()
 

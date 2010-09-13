@@ -244,6 +244,17 @@ class caValue(object):
         if meta==defs.DBR_PLAIN:
             pass
 
+        elif meta==defs.DBR_STS:
+            conv=dbr_sts(self.dbf)
+            self.status, self.severity = conv.unpack(raw)
+            raw=raw[conv.size:]
+
+        elif meta==defs.DBR_TIME:
+            conv=dbr_sts(self.dbf)
+            self.status, self.severity, sec, nsec = conv.unpack(raw)
+            self.stamp=sec+float(nsec)*1e-9
+            raw=raw[conv.size:]
+
         else:
             raise RuntimeError('meta data format not supported')
 
