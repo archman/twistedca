@@ -9,10 +9,11 @@ from cas.defs import DBF_STRING, DBF_LONG
 
 def main():
     
-    test=BasicPV('test', dtype=DBF_STRING, value='hello world')
-    test2=BasicPV('test2', dtype=DBF_LONG, value=42)
+    test=BasicPV('test', dtype=DBF_STRING, value=['hello world'])
+    test2=BasicPV('test2', dtype=DBF_LONG, value=[42])
+    test3=BasicPV('test3', dtype=DBF_LONG, value=range(10))
     
-    p = Server(pvs=[test,test2])
+    p = Server(pvs=[test,test2,test3])
     
     asyncore.loop()
 

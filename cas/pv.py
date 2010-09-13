@@ -50,12 +50,14 @@ class PV(object):
         return 'PV %(name)s with %(maxcount)d of %(dtype)d'%self.__dict__
 
 class BasicPV(PV):
-    def __init__(self, name, dtype, value=None):
+    def __init__(self, name, dtype, value=None, maxcount=None):
         import time
-        PV.__init__(self, name, dtype , 1)
+        if maxcount is None:
+            maxcount=len(value)
+        PV.__init__(self, name, dtype , maxcount)
         self.data=caValue(dtype)
         if value is not None:
-            self.data.value=[value]
+            self.data.value=value
             self.data.stamp=time.time()
 
     def get(self, channel, dtype, count):
