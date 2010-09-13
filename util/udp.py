@@ -11,8 +11,6 @@ class UDPdispatcher(asyncore.dispatcher):
 
     def sendto(self, data, peer):
         try:
-            print data
-            print peer
             return self.socket.sendto(data, 0, peer)
         except socket.error, why:
             if why.args[0] == EWOULDBLOCK:

@@ -72,8 +72,8 @@ class BasicPV(PV):
             log.error("trying to assign %d to %d",dbf,self.dbf)
             raise CAError("Unsupported type conversion", ECA_NOCONVERT)
 
+        log.info('set %s to %s',self.name,repr(data))
         self.data.fromstring(data, dtype, count)
         self.post(DBE_VALUE|DBE_LOG)
-        log.info('set %s to %s',self.name,repr(data))
         return True
 

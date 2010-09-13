@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import logging
+log=logging.getLogger('cas.server')
+
 from endpoint import UDPpeer, TCPserver
 from util.ca import CAmessage, packSearchBody
 from socket import htons, htonl, ntohs, ntohl
@@ -54,7 +57,7 @@ class Server(object):
 
     def nameres(self, pkt, peer, endpoint):
         name=pkt.body.strip('\0')
-        print peer,pkt.count,'is looking for',repr(name),''
+        log.info('%s is looking for %s',str(peer),name)
         ret = self.Lookup(name)
         if ret and not isinstance(ret, tuple):
             ret = (0xffffffff, SERVER_PORT)
@@ -62,12 +65,15 @@ class Server(object):
             ack=CAmessage(cmd=6, size=8, dtype=ret[1],
                           p1=ret[0], p2=pkt.p2,
                           body=packSearchBody(CA_VERSION))
-            print 'reply with',ack
+
             endpoint.sendto(ack.pack(), peer)
             
         
     def Lookup(self,name):
-        return name in self.pvs
+        ret=name in self.pvs
+        if ret:
+            log.info('I have %s',name)
+        return ret
 
     def GetPV(self,name):
         return self.pvs.get(name)

@@ -26,10 +26,10 @@ class Channel(object):
 
         # inform PV
         self.pv.connect(self)
-        log.debug('Create Channel')
+        log.debug('Create %s',self)
 
     def close(self):
-        log.debug('Destroy Channel')
+        log.debug('Destroy %s',self)
         self.pv.disconnect(self)
         
         if self.circuit.connected:
@@ -44,10 +44,9 @@ class Channel(object):
             c.post(mask)
 
     def readnotify(self, pkt, peer, circuit):
-        log.debug('Read from test')
+        log.debug('Read %s',self.pv.name)
         try:
             data, count=self.pv.get(self, pkt.dtype, pkt.count)
-            print 'data',len(data),repr(data)
             
             pkt.cmd=15
             pkt.size=len(data)
@@ -67,14 +66,13 @@ class Channel(object):
         self.circuit.send(raw)
 
     def write(self, pkt, peer, circuit):
-        log.debug('Write')
+        log.debug('Write %s',self.pv.name)
         try:
             self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
         except CAError:
             log.exception('Write failed')
 
     def monitoradd(self, pkt, peer, circuit):
-        log.debug('Monitor add')
 
         if pkt.p2 in self.monitors:
             raise CAError('Attempt to use already existing monitor',ECA_BADCHID)
@@ -83,19 +81,20 @@ class Channel(object):
 
         mon=monitor(self, pkt.p2, pkt.dtype, pkt.count, mask)
         try:
+            log.debug('Add %s',mon)
             mon.post(mask)
         except CAError,e:
-            # failed to create monitor
+            log.exception('failed to create monitor')
             return
 
         self.monitors[mon.ioid]=mon
 
     def monitordel(self, pkt, peer, circuit):
-        log.debug('Monitor del')
         if pkt.p2 not in self.monitors:
             raise CAError('Attempt to cancel non-existant monitor',ECA_BADCHID)
         
         mon = self.monitors.pop(pkt.p2)
+        log.debug('Del %s',mon)
         
         pkt = CAmessage(cmd=1, dtype=mon.dbr, p1=self.circuit.cid, p2=mon.ioid)
         self.circuit.send(pkt.pack())
@@ -105,6 +104,10 @@ class Channel(object):
         hdl=self._chan.get(pkt.cmd, self.server.dispatchtcp)
         
         hdl(pkt, peer, self)
+
+    def __str__(self):
+        return 'Channel %(sid)s to %(peer)s for %(pv)s' % \
+            {'sid':self.sid, 'peer':self.circuit.peer, 'pv':self.pv.name}
 
 class monitor(object):
     
@@ -130,3 +133,6 @@ class monitor(object):
                             count=0, p1=e.code, p2=self.ioid)
 
         self.channel.circuit.send(pkt.pack())
+
+    def __str__(self):
+        return 'Monitor on %s for %d'%(str(self.channel),self.mask)

@@ -169,11 +169,11 @@ class TCPserver(asyncore.dispatcher):
         self.bind(endpoint)
         self.listen(5)
         
-        print 'I am',self.socket.getsockname()
+        log.debug('I am %s',self.socket.getsockname())
 
     def handle_accept(self):
         sock, peer = self.accept()
-        print 'Accepted from ',peer
+        log.debug('Accepted from %s',peer)
         CAcircuit(self.handler, sock, peer)
 
     def handle_error(self):
@@ -220,7 +220,7 @@ class UDPpeer(UDPdispatcher):
             self.handler(pkt, peer, self)
 
         if len(msg)>0:
-            print 'dropping incomplete message'
+            log.warning('dropping incomplete message')
 
     def handle_error(self):
         raise
