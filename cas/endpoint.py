@@ -23,6 +23,7 @@ class CAcircuit(asyncore.dispatcher_with_send):
         self.host=None
         
         self._circ={0 :self.caver,
+                    4 :self.forwardchan,
                     12:self.clearchan,
                     15:self.forwardchan,
                     18:self.createchan,

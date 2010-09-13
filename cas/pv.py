@@ -62,8 +62,11 @@ class StringPV(PV):
 
     def set(self, channel, data, dtype, count):
         dbf, meta = dbr_to_dbf(dtype)
-        if dbf!=DBF['string']:
+        if dbf!=DBF_STRING:
             raise CAError("Unsupported type conversion")
+        print self.data.value
+        self.data.fromstring(data, dtype, count)
+        print self.data.value
         print 'set',self.name,'to',repr(data)
         return True
 

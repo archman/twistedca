@@ -233,11 +233,18 @@ class caValue(object):
                                     int(self.stamp), ns)
 
         else:
-            raise RuntimeError('Failed to convert')
+            raise RuntimeError('meta data format not supported')
 
         data=dbr_value(self.dbf).pack(self.value[:count])
         return (padString(metadata+data), len(self.value[:count]))
 
     def fromstring(self, raw, dbr, count):
         dbf, meta = defs.dbr_to_dbf(dbr)
-        return ''
+        assert self.dbf==dbf, 'fromstring() is serialization, not a value conversion'
+        if meta==defs.DBR_PLAIN:
+            pass
+
+        else:
+            raise RuntimeError('meta data format not supported')
+
+        self.value = dbr_value(dbf).unpack(raw)

@@ -14,7 +14,8 @@ class Channel(object):
         self.server, self.circuit=server, circuit
         self.pv, self.sid, self.cid=pv, sid, cid
 
-        self._chan={15:self.readnotify}
+        self._chan={4 :self.write,
+                    15:self.readnotify}
 
         # inform circuit
         self.circuit.closeList.add(self.close)
@@ -51,7 +52,13 @@ class Channel(object):
         raw=pkt.pack()
         print 'send',repr(raw)
         self.circuit.send(raw)
-            
+
+    def write(self, pkt, peer, circuit):
+        log.debug('Write')
+        try:
+            self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
+        except CAError:
+            log.exception('Write failed')
 
     def dispatch(self, pkt, peer, circuit):
         
