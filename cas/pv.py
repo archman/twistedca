@@ -42,9 +42,9 @@ class PV(object):
     def monitor(self, channel, dtype, count, mask):
         return self.get(channel, dtype, count)
 
-    def post(self,data,dtype,mask=0):
+    def post(self,mask):
         for c in self.channels:
-            c.post(data,dtype,mask)
+            c.post(mask)
 
     def __str__(self):
         return 'PV %(name)s with %(maxcount)d of %(dtype)d'%self.__dict__
@@ -69,9 +69,9 @@ class BasicPV(PV):
         if dbf!=self.dbf:
             log.error("trying to assign %d to %d",dbf,self.dbf)
             raise CAError("Unsupported type conversion", ECA_NOCONVERT)
-        print self.data.value
+
         self.data.fromstring(data, dtype, count)
-        print self.data.value
-        print 'set',self.name,'to',repr(data)
+        self.post(DBE_VALUE|DBE_LOG)
+        log.info('set %s to %s',self.name,repr(data))
         return True
 

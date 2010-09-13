@@ -23,6 +23,8 @@ class CAcircuit(asyncore.dispatcher_with_send):
         self.host=None
         
         self._circ={0 :self.caver,
+                    1 :self.forwardchan,
+                    2 :self.forwardchan,
                     4 :self.forwardchan,
                     12:self.clearchan,
                     15:self.forwardchan,
@@ -122,13 +124,14 @@ class CAcircuit(asyncore.dispatcher_with_send):
 
     def handle_close(self):
         log.debug('Destroy %s',self)
+        self.close()
+        
         self.server.dispatchtcp(None, self.peer, self)
         # make a copy of the list (not contents)
         # because calling c() may cause the size
         # of closeList to change
         for c in copy(self.closeList):
             c()
-        self.close()
     
     def handle_read(self):
         msg = self.recv(8196)

@@ -9,6 +9,8 @@ header_extend = Struct ('!II')
 
 searchbody=Struct('!Hxxxxxx')
 
+monitormask=Struct('!xxxxxxxxxxxxHxx')
+
 packSearchBody=searchbody.pack
 
 def padString(inp):
