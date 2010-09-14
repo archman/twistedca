@@ -17,7 +17,8 @@ class Channel(object):
         self._chan={1 :self.monitoradd,
                     2 :self.monitordel,
                     4 :self.write,
-                    15:self.readnotify}
+                    15:self.readnotify,
+                    19:self.write}
 
         self.monitors={}
 
@@ -69,8 +70,20 @@ class Channel(object):
         log.debug('Write %s',self.pv.name)
         try:
             self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
-        except CAError:
+            
+            if pkt.cmd==19:
+                pkt.size=0
+                pkt.p1=error.ECA_NORMAL
+                pkt.body=''
+
+        except CAError, e:
             log.exception('Write failed')
+            if pkt.cmd==19:
+                pkt.size=0
+                pkt.p1=e.code
+                pkt.body=''
+
+        self.circuit.send(pkt.pack())
 
     def monitoradd(self, pkt, peer, circuit):
 
