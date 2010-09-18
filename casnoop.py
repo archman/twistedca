@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import asyncore, logging
-#from util.timer import Queue, Timer
+import logging
+
+from twisted.internet import reactor
+
 from cas.pv import BasicPV
 from cas.server import Server
 from cas.defs import DBF_STRING, DBF_LONG
@@ -15,7 +17,7 @@ def main():
     
     p = Server(pvs=[test,test2,test3])
     
-    asyncore.loop()
+    reactor.run()
 
 if __name__=='__main__':
     logging.basicConfig(format='%(message)s',level=logging.DEBUG)

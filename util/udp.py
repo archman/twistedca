@@ -1,40 +1,21 @@
 # -*- coding: utf-8 -*-
 
-import asyncore, socket
+from twisted.internet.udp import Port
 
-class UDPdispatcher(asyncore.dispatcher):
-    """Since the default dispatcher does not provide
-    wrappers for the UDP socket ops
+class SharedUDP(Port):
+    """A UDP socket which can share
+    a port with other similarly configured
+    sockets.  Broadcasts to this port will
+    be copied to all sockets.
+    However, unicast traffic will only be
+    delivered to one.
     """
-    def __init__(self, *args, **kwargs):
-        asyncore.dispatcher.__init__(self, *args, **kwargs)
-
-    def sendto(self, data, peer):
-        try:
-            return self.socket.sendto(data, 0, peer)
-        except socket.error, why:
-            if why.args[0] == EWOULDBLOCK:
-                return 0
-            elif why.args[0] in (ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED):
-                self.handle_close()
-                return 0
-            else:
-                raise
-
-    def recvfrom(self, buffer_size):
-            try:
-                data, peer = self.socket.recvfrom(buffer_size)
-                if not data:
-                    # a closed connection is indicated by signaling
-                    # a read condition, and having recv() return 0.
-                    self.handle_close()
-                    return ('', None)
-                else:
-                    return (data, peer)
-            except socket.error, why:
-                # winsock sometimes throws ENOTCONN
-                if why.args[0] in [ECONNRESET, ENOTCONN, ESHUTDOWN, ECONNABORTED]:
-                    self.handle_close()
-                    return ('', None)
-                else:
-                    raise
+    
+    def createInternetSocket(self):
+        import socket
+        sock=Port.createInternetSocket(self)
+        opt=socket.SO_REUSEADDR
+        if hasattr(socket, 'SO_REUSEPORT'):
+            opt=socket.SO_REUSEPORT
+        sock.setsockopt(socket.SOL_SOCKET, opt, 1)
+        return sock

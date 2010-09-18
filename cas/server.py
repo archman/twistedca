@@ -3,8 +3,11 @@
 import logging
 log=logging.getLogger('cas.server')
 
-from endpoint import UDPpeer, TCPserver
+from twisted.internet import reactor,tcp,protocol
+
+from endpoint import UDPpeer, CAcircuit
 from util.ca import CAmessage, packSearchBody
+from util.udp import SharedUDP
 from socket import htons, htonl, ntohs, ntohl
 from defs import *
 
@@ -13,9 +16,23 @@ class Server(object):
     def __init__(self, interfaces=('localhost',), pvs=[]):
         self.udp=[]
         self.tcp=[]
+
+        self.tcpfactory=protocol.ServerFactory()
+        self.tcpfactory.protocol=CAcircuit
+        self.tcpfactory.server=self
+
         for i in interfaces:
-            self.udp.append(UDPpeer(self.dispatchudp,(i,SERVER_PORT)))
-            self.tcp.append(TCPserver(self,(i,SERVER_PORT)))
+            up=SharedUDP(SERVER_PORT,
+                         UDPpeer(self.dispatchudp),
+                         interface=i,
+                         reactor=reactor)
+            up.startListening()
+            self.udp.append(up)
+
+            tp=reactor.listenTCP(SERVER_PORT,
+                                 self.tcpfactory,
+                                 interface=i)
+            self.tcp.append(tp)
 
         self._udp={0:self.ignore,6:self.nameres}
         self._tcp={}

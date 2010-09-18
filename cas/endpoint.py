@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 
-import asyncore, socket, logging
-from util.udp import UDPdispatcher
+import socket, logging
 from util.ca import CAmessage
 from channel import Channel
 import defs
 from copy import copy
 
+from twisted.internet.protocol import Protocol, DatagramProtocol
+
 log=logging.getLogger('cas.endpoint')
 
-class CAcircuit(asyncore.dispatcher_with_send):
+class CAcircuit(Protocol):
     
-    def __init__(self, server, sock=None, peer=None):
-        self.server=server
-        asyncore.dispatcher_with_send.__init__(self, sock)
-        self.peer=peer
-        self.in_buffer=''
+    def __init__(self):
+        self.server, self.peer=None, None
+    
+        self.prio, self.version=0, 10
+
+        self.user,self.host=None,None
         
-        self.prio=0
-        self.version=10
-        self.user=None
-        self.host=None
+        self.in_buffer=''
         
         self._circ={0 :self.caver,
                     1 :self.forwardchan,
@@ -47,9 +46,9 @@ class CAcircuit(asyncore.dispatcher_with_send):
     # CA actions
 
     def caver(self, pkt, x, y):
-        log.debug('Create %s',self)
         self.version=pkt.count
         self.prio=pkt.dtype
+        log.debug('Version %s',self)
 
     def caclient(self, pkt, x, y):
         self.user=pkt.body.strip('\0')
@@ -59,10 +58,10 @@ class CAcircuit(asyncore.dispatcher_with_send):
     def cahost(self, pkt, x, y):
         self.host=pkt.body.strip('\0')
         # do reverse lookup
-        host, aliases, z = socket.gethostbyaddr(self.peer[0])
+        host, aliases, z = socket.gethostbyaddr(self.peer.host)
         if self.host!=host and self.host not in aliases:
             log.warning("""Rejecting connection from %s
-            reverse lookup against %s failed""",self.peer[0],self.host)
+            reverse lookup against %s failed""",self.peer.host,self.host)
             self.close()
             return
         log.debug('Update %s',self)
@@ -125,12 +124,14 @@ class CAcircuit(asyncore.dispatcher_with_send):
 
     # socket operations
 
-    def handle_connect(self):
+    def connectionMade(self):
+        self.server=self.factory.server
+        self.peer=self.transport.getPeer()
+        log.debug('connection from %s',self.peer)
         log.debug('Create %s',self)
 
-    def handle_close(self):
+    def connectionLost(self, reason):
         log.debug('Destroy %s',self)
-        self.close()
         
         self.server.dispatchtcp(None, self.peer, self)
         # make a copy of the list (not contents)
@@ -138,9 +139,12 @@ class CAcircuit(asyncore.dispatcher_with_send):
         # of closeList to change
         for c in copy(self.closeList):
             c()
+
+    def send(self, msg):
+        self.transport.write(msg)
     
-    def handle_read(self):
-        msg = self.recv(8196)
+    def dataReceived(self, msg):
+
         msg=self.in_buffer+msg
 
         while msg is not None and len(msg)>=16:
@@ -153,66 +157,20 @@ class CAcircuit(asyncore.dispatcher_with_send):
 
         self.in_buffer=msg # save remaining
 
-    def handle_error(self):
-        raise
-
     def __str__(self):
         return 'Circuit v4%(version)d to %(peer)s as %(host)s:%(user)s'% \
             self.__dict__
 
-class TCPserver(asyncore.dispatcher):
+
+class UDPpeer(DatagramProtocol):
     
-    def __init__(self, handler, endpoint=('localhost',0)):
+    def __init__(self, handler):
         self.handler=handler
-        asyncore.dispatcher.__init__(self)
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind(endpoint)
-        self.listen(5)
-        
-        log.debug('I am %s',self.socket.getsockname())
-
-    def handle_accept(self):
-        sock, peer = self.accept()
-        log.debug('Accepted from %s',peer)
-        CAcircuit(self.handler, sock, peer)
-
-    def handle_error(self):
-        raise
-
-
-class UDPpeer(UDPdispatcher):
-    
-    def __init__(self, handler, endpoint=('localhost',0)):
-        self.handler=handler
-        UDPdispatcher.__init__(self)
-        self.create_socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.set_reuse_addr()
-        self.bind(endpoint)
-        self.sbuf=[] # [(data,peer)]
-
-    def handle_connect(self):
-        pass
 
     def sendto(self, msg, peer):
-        return self.sbuf.append((msg,peer))
-    
-    def writeable(self):
-        return len(self.sbuf)>0
+        return self.transport.write(msg, peer)
 
-    def handle_write(self):
-        if len(self.sbuf)==0:
-            return
-        msg, peer = self.sbuf[0]
-        sent=UDPdispatcher.sendto(self,msg, peer)
-        if sent == len(msg):
-            self.sbuf.pop(0)
-        else:
-            print sent,len(msg)
-            raise RuntimeError('send incomplete')
-
-    def handle_read(self):
-        msg, peer = self.recvfrom(4096)
+    def datagramReceived(self, msg, peer):
         
         while msg is not None and len(msg)>=16:
         
@@ -222,6 +180,3 @@ class UDPpeer(UDPdispatcher):
 
         if len(msg)>0:
             log.warning('dropping incomplete message')
-
-    def handle_error(self):
-        raise
