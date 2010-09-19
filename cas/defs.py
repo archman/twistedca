@@ -29,17 +29,32 @@ DBF_CHAR   =4
 DBF_LONG   =5
 DBF_DOUBLE =6
 
-elementsize={DBF_STRING:40,
-             DBF_INT:2,
-             DBF_SHORT:2,
-             DBF_FLOAT:4,
-             DBF_ENUM:2,
-             DBF_CHAR:1,
-             DBF_LONG:4,
-             DBF_DOUBLE:8
+DBF_C_INTEGER=100
+DBF_C_REAL=200
+DBF_C_SPECIAL=200
+_fieldclass={DBF_STRING:DBF_C_SPECIAL,
+             DBF_INT:DBF_C_INTEGER,
+             DBF_SHORT:DBF_C_INTEGER,
+             DBF_FLOAT:DBF_C_REAL,
+             DBF_ENUM:DBF_C_SPECIAL,
+             DBF_CHAR:DBF_C_INTEGER,
+             DBF_LONG:DBF_C_INTEGER,
+             DBF_DOUBLE:DBF_C_REAL
             }
+def dbf_field_class(dbf):
+    return _fieldclass[dbf]
+
+_elementsize={DBF_STRING:40,
+              DBF_INT:2,
+              DBF_SHORT:2,
+              DBF_FLOAT:4,
+              DBF_ENUM:2,
+              DBF_CHAR:1,
+              DBF_LONG:4,
+              DBF_DOUBLE:8
+             }
 def dbf_elem_size(dbf):
-    return elementsize[dbf]
+    return _elementsize[dbf]
 
 DBR_STRING =DBF_STRING
 DBR_INT    =DBF_INT
