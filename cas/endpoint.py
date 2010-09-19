@@ -131,14 +131,14 @@ class CAcircuit(Protocol):
         log.debug('Create %s',self)
 
     def connectionLost(self, reason):
-        log.debug('Destroy %s',self)
-        
         self.server.dispatchtcp(None, self.peer, self)
         # make a copy of the list (not contents)
         # because calling c() may cause the size
         # of closeList to change
         for c in copy(self.closeList):
             c()
+
+        log.debug('Destroy %s',self)
 
     def send(self, msg):
         self.transport.write(msg)

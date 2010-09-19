@@ -63,14 +63,15 @@ class Server(object):
         self.beaconTask.start(15.0)
 
     def close(self):
+        from copy import copy
         # make a copy of the list (not contents)
         # because calling c() may cause the size
         # of closeList to change
         for c in copy(self.closeList):
             c()
         for up, tp in self.interfaces:
-            up.loseConnection()
-            tp.loseConnection()
+            up.stopListening()
+            tp.stopListening()
 
     def sendBeacon(self):
         b = CAmessage(cmd=13, p1=self.beaconID)

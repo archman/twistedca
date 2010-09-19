@@ -29,11 +29,11 @@ class Channel(object):
         self.pv.connect(self)
         log.debug('Create %s',self)
 
-    def close(self):
+    def close(self, connected=False):
         log.debug('Destroy %s',self)
         self.pv.disconnect(self)
         
-        if self.circuit.connected:
+        if connected:
             pkt = CAmessage(cmd=27, p1=self.cid)
             self.circuit.send(pkt.pack())
 

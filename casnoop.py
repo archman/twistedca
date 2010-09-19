@@ -18,6 +18,8 @@ def main():
     p = Server(pvs=[test,test2,test3])
     
     reactor.run()
+    
+    p.close()
 
 if __name__=='__main__':
     logging.basicConfig(format='%(message)s',level=logging.DEBUG)
