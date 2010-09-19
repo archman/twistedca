@@ -28,15 +28,16 @@ class Server(object):
         self.tcpfactory.server=self
 
         for addr, tcpport in interfaces:
+            tp=reactor.listenTCP(tcpport,
+                                 self.tcpfactory,
+                                 interface=addr)
+
             up=SharedUDP(SERVER_PORT,
-                         UDPpeer(self.dispatchudp),
+                         UDPpeer(self.dispatchudp,tcpport),
                          interface=addr,
                          reactor=reactor)
             up.startListening()
 
-            tp=reactor.listenTCP(tcpport,
-                                 self.tcpfactory,
-                                 interface=addr)
             self.interfaces.append((up,tp))
 
         self._udp={0:self.ignore,6:self.nameres}
@@ -99,7 +100,7 @@ class Server(object):
         log.info('%s is looking for %s',str(peer),name)
         ret = self.Lookup(name)
         if ret and not isinstance(ret, tuple):
-            ret = (0xffffffff, SERVER_PORT)
+            ret = (0xffffffff, endpoint.tcpport)
         if ret:
             ack=CAmessage(cmd=6, size=8, dtype=ret[1],
                           p1=ret[0], p2=pkt.p2,

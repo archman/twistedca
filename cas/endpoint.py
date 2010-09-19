@@ -164,8 +164,8 @@ class CAcircuit(Protocol):
 
 class UDPpeer(DatagramProtocol):
     
-    def __init__(self, handler):
-        self.handler=handler
+    def __init__(self, handler, tcpport=defs.SERVER_PORT):
+        self.handler, self.tcpport=handler, tcpport
 
     def sendto(self, msg, peer):
         return self.transport.write(msg, peer)
