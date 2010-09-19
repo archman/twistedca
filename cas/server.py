@@ -5,6 +5,7 @@ log=logging.getLogger('cas.server')
 
 from twisted.internet import reactor,tcp,protocol
 from twisted.internet.task import LoopingCall
+from twisted.internet.error import CannotListenError
 
 from endpoint import UDPpeer, CAcircuit
 from util.ca import CAmessage, packSearchBody
@@ -28,9 +29,17 @@ class Server(object):
         self.tcpfactory.server=self
 
         for addr, tcpport in interfaces:
-            tp=reactor.listenTCP(tcpport,
-                                 self.tcpfactory,
-                                 interface=addr)
+            try:
+                tp=reactor.listenTCP(tcpport,
+                                    self.tcpfactory,
+                                    interface=addr)
+            except CannotListenError:
+                # try non-standard port
+                tp=reactor.listenTCP(0,
+                                    self.tcpfactory,
+                                    interface=addr)
+                tcpport=tp.getHost().port
+                log.warning('Server running on non-standard port %d',tcpport)
 
             up=SharedUDP(SERVER_PORT,
                          UDPpeer(self.dispatchudp,tcpport),
