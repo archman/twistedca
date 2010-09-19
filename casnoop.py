@@ -5,15 +5,15 @@ import logging
 
 from twisted.internet import reactor
 
-from cas.pv import BasicPV
+from cas.pv import PV
 from cas.server import Server
 from cas.defs import DBF_STRING, DBF_LONG
 
 def main():
     
-    test=BasicPV('test', dtype=DBF_STRING, value=['hello world'])
-    test2=BasicPV('test2', dtype=DBF_LONG, value=[42])
-    test3=BasicPV('test3', dtype=DBF_LONG, value=range(10))
+    test=PV('test', dbf=DBF_STRING, value=['hello world'])
+    test2=PV('test2', dbf=DBF_LONG, value=[42])
+    test3=PV('test3', dbf=DBF_LONG, value=range(10), maxcount=None)
     
     p = Server(pvs=[test,test2,test3])
     

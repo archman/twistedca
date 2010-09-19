@@ -207,8 +207,8 @@ dbr_stsack_string=Struct('!HHHH40s')
 
 
 class caValue(object):
-    def __init__(self, dbf_native):
-        self.dbf=dbf_native
+    def __init__(self, dbf):
+        self.dbf=dbf
         self.value=[]
         self.units=''
         self.stamp=0.0
