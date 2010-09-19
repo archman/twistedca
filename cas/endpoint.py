@@ -60,9 +60,9 @@ class CAcircuit(Protocol):
         # do reverse lookup
         host, aliases, z = socket.gethostbyaddr(self.peer.host)
         if self.host!=host and self.host not in aliases:
-            log.warning("""Rejecting connection from %s
+            log.warning("""Demoting connection from %s
             reverse lookup against %s failed""",self.peer.host,self.host)
-            self.close()
+            self.host='<ANONYMOUS>'
             return
         log.debug('Update %s',self)
         self.circuitReady()
