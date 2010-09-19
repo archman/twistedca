@@ -4,18 +4,22 @@ import logging
 log=logging.getLogger('cas.server')
 
 from twisted.internet import reactor,tcp,protocol
+from twisted.internet.task import LoopingCall
 
 from endpoint import UDPpeer, CAcircuit
 from util.ca import CAmessage, packSearchBody
 from util.udp import SharedUDP
-from socket import htons, htonl, ntohs, ntohl
+from socket import inet_aton
 from defs import *
+
+from struct import Struct
+
+ipv4=Struct('!I')
 
 class Server(object):
     
     def __init__(self, interfaces=('localhost',), pvs=[]):
-        self.udp=[]
-        self.tcp=[]
+        self.interfaces=[]
 
         self.tcpfactory=protocol.ServerFactory()
         self.tcpfactory.protocol=CAcircuit
@@ -27,12 +31,11 @@ class Server(object):
                          interface=i,
                          reactor=reactor)
             up.startListening()
-            self.udp.append(up)
 
             tp=reactor.listenTCP(SERVER_PORT,
                                  self.tcpfactory,
                                  interface=i)
-            self.tcp.append(tp)
+            self.interfaces.append((up,tp))
 
         self._udp={0:self.ignore,6:self.nameres}
         self._tcp={}
@@ -43,16 +46,33 @@ class Server(object):
         
         self.closeList=set()
 
+        self.beaconID=0
+        self.beaconTask=LoopingCall(self.sendBeacon)
+        self.beaconTask.start(15.0)
+
     def close(self):
         # make a copy of the list (not contents)
         # because calling c() may cause the size
         # of closeList to change
         for c in copy(self.closeList):
             c()
-        for ep in self.udp:
-            ep.close()
-        for ep in self.tcp:
-            ep.close()
+        for up, tp in self.interfaces:
+            up.loseConnection()
+            tp.loseConnection()
+
+    def sendBeacon(self):
+        b = CAmessage(cmd=13, p1=self.beaconID)
+
+        for up, tp in self.interfaces:
+            host = tp.getHost()
+
+            b.p2=ipv4.unpack(inet_aton(host.host))[0]
+            b.dtype=host.port
+
+            #TODO: introspect interfaces
+            up.write(b.pack(), ('255.255.255.255', CLIENT_PORT))
+
+        self.beaconID=self.beaconID+1
 
     def dispatchudp(self, pkt, peer, endpoint):
         fn=self._udp.get(pkt.cmd, self.unknown)

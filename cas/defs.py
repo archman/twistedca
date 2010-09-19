@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 SERVER_PORT=5064
+CLIENT_PORT=5065
 
 CA_VERSION=12
 
