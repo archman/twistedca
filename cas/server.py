@@ -18,23 +18,25 @@ ipv4=Struct('!I')
 
 class Server(object):
     
-    def __init__(self, interfaces=('localhost',), pvs=[]):
+    def __init__(self, interfaces=[('localhost',SERVER_PORT)],
+                 pvs=[], reactor=reactor):
+        self.reactor=reactor
         self.interfaces=[]
 
         self.tcpfactory=protocol.ServerFactory()
         self.tcpfactory.protocol=CAcircuit
         self.tcpfactory.server=self
 
-        for i in interfaces:
+        for addr, tcpport in interfaces:
             up=SharedUDP(SERVER_PORT,
                          UDPpeer(self.dispatchudp),
-                         interface=i,
+                         interface=addr,
                          reactor=reactor)
             up.startListening()
 
-            tp=reactor.listenTCP(SERVER_PORT,
+            tp=reactor.listenTCP(tcpport,
                                  self.tcpfactory,
-                                 interface=i)
+                                 interface=addr)
             self.interfaces.append((up,tp))
 
         self._udp={0:self.ignore,6:self.nameres}
@@ -90,7 +92,7 @@ class Server(object):
         pass
 
     def unknown(self, pkt, peer, endpoint):
-        print peer,'sent',pkt
+        print '>> Unknown <<',peer,'sent',pkt
 
     def nameres(self, pkt, peer, endpoint):
         name=pkt.body.strip('\0')
