@@ -13,19 +13,36 @@ def _fail(val, **kwargs):
     raise ConversionNotDefined()
 
 def intconv(val, **kwargs):
-    return int(val)
+    if hasattr(val, '__len__'):
+        return map(lambda v:int(v), val)
+    else:
+        return int(val)
 
 def floatconv(val, **kwargs):
-    return float(val)
-
+    if hasattr(val, '__len__'):
+        return map(lambda v:float(v), val)
+    else:
+        return float(val)
+        
 def intprint(val, **kwargs):
-    return '%d'%value
+    # use normal list printing and strip off the brackets
+    return [str(val)[1:-1]]
 
 def floatprint(val, prec=None, **kwargs):
     if prec is None:
-        return '%g'%val
+        spec='%g'
     else:
-        return ("%%.%dg"%prec)%val
+        spec="%%.%dg"%prec
+
+    def _helper(a,b):
+        if len(a)>0:
+            a=a+', '
+        return spec%val
+
+    if not hasattr(val, '__len__'):
+        val=[val]
+
+    return [reduce(_helper, val, '')]
 
 def printEnum(val, strs=[], **kwargs):
     if val>=len(strs) or val<0:
@@ -37,18 +54,6 @@ def chooseEnum(val, strs=[], **kwargs):
         if s==val:
             return i
     raise ValueError('Value is not a choice')
-
-_default={DBF_STRING:'',
-          DBF_INT   :0,
-          DBF_FLOAT :0.0,
-          DBF_ENUM  :0, # needs access to enum list
-          DBF_CHAR  :0, # convert to char array
-          DBF_LONG  :0,
-          DBF_DOUBLE:0.0,
-         }
-
-def setValue(_, force, **kwargs):
-    return force
 
 # Excludes (X,X) cases
 # (X,Y):None for special case
@@ -97,52 +102,50 @@ _converter={(DBF_STRING,DBF_INT)   :intconv,
            }
 
 def visitAllValues(val, conv, **kwargs):
-    val.value = conv(val.value, **kwargs)
     for f in ['display', 'warning', 'alarm', 'control']:
         u, l = getattr(val,f)
         u, l = conv(u, **kwargs), conv(l, **kwargs)
 
-def dbr_convert(val,dbf):
+def dbr_convert(dbf, val, meta):
     """Return a partial copy of the the given caValue
     with converted to a different native field
     type.
     
     The returned structure should not be modified as this
     may cause modifications to the original value.
+    
+    @returns: (val, meta)
     """
 
-    ret=copy(val) # shallow copy
+    rmeta=copy(meta) # shallow copy
     
-    if val.dbf==dbf:
-        return ret
+    if meta.dbf==dbf:
+        return (copy(val), rmeta)
     
-    scls=dbf_field_class(val.dbf)
-    dcls=dbf_field_class(dbf)
-    
-    conv=_converter[(val.dbf,dbf)]
-    
-    extra={}
+    conv=_converter[(meta.dbf,dbf)]
+    print (meta.dbf,dbf),conv
+
     if conv is None:
         # special cases
-        if (val.dbf,dbf)==(DBF_STRING,DBF_CHAR):
+        if (meta.dbf,dbf)==(DBF_STRING,DBF_CHAR):
             # clear associated
-            visitAllValues(ret, setValue, force=0)
-            ret.value=val.value[0]
+
+            visitAllValues(rmeta, lambda _: 0)
+            ret=reduce(str.__add__,val,'')
             
             
-        elif (val.dbf,dbf)==(DBF_CHAR,DBF_STRING):
-            ret.value=[val.value[:40]]
+        elif (meta.dbf,dbf)==(DBF_CHAR,DBF_STRING):
+            visitAllValues(rmeta, lambda _: None)
+            ret=[val[i:(i+40)] for i in range(0,len(val),40)]
 
-        ret.dbf=dbf
-        return ret
+        rmeta.dbf=dbf
+        return (copy(ret), rmeta)
 
-    elif scls==DBF_C_REAL:
-        extra['prec']=val.precision
+    visitAllValues(rmeta, conv,
+                   prec=meta.precision,
+                   strs=meta.strs)
+    ret=conv(val, prec=meta.precision,
+             strs=meta.strs)
 
-    elif val.dbf==DBF_ENUM:
-        extra['strs']=val.strs
-
-    visitAllValues(ret, conv, **extra)
-
-    ret.dbf=dbf
-    return ret
+    rmeta.dbf=dbf
+    return (copy(ret), rmeta)

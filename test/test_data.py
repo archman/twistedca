@@ -51,18 +51,96 @@ class TestSerialize(unittest.TestCase):
 
     #TODO: test ctrl
 
-class TestcaValue(unittest.TestCase):
+class TestToString(unittest.TestCase):
     
     def test_string(self):
-        val = cadata.caValue(defs.DBF_STRING)
-        val.value=['hello world']
-        val.status=0x1234
-        val.severity=0x1020
-        val.stamp=1284327459.1030619
+        meta = cadata.caMeta(defs.DBF_STRING)
+        val=['hello world']
+        meta.status=0x1234
+        meta.severity=0x1020
+        meta.stamp=1284327459.1030619
 
-        one, count=val.tostring(defs.DBR_STRING, 1)
+        one, count=cadata.tostring(val, meta, defs.DBR_STRING, 1)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
         self.assertEqual(count, 1)
         self.assertEqual(one, 'hello world'+('\0'*5))
+
+        one, count=cadata.tostring(val, meta, defs.DBR_STS_STRING, 1)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
+        self.assertEqual(count, 1)
+        self.assertEqual(len(one), 24)
+        self.assertEqual(one, '\x12\x34\x10\x20hello world'+('\0'*9))
+
+        one, count=cadata.tostring(val, meta, defs.DBR_CHAR, 16)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
+        self.assertEqual(count, 11)
+        self.assertEqual(len(one), 16)
+        self.assertEqual(one, 'hello world'+('\0'*5))
+
+    def test_int(self):
+        meta = cadata.caMeta(defs.DBF_INT)
+        val=[5]
+        meta.status=0x1234
+        meta.severity=0x1020
+        meta.stamp=1284327459.1030619
+
+        one, count=cadata.tostring(val, meta, defs.DBR_INT, 1)
+        self.assertEqual(count, 1)
+        self.assertEqual(one, '\x00\x05'+('\0'*6))
+
+        one, count=cadata.tostring(val, meta, defs.DBR_STRING, 1)
+        self.assertEqual(count, 1)
+        self.assertEqual(one, '5'+('\0'*7))
+
+    def test_intarray(self):
+        meta = cadata.caMeta(defs.DBF_INT)
+        val=range(5,15)
+        meta.status=0x1234
+        meta.severity=0x1020
+        meta.stamp=1284327459.1030619
+
+        one, count=cadata.tostring(val, meta, defs.DBR_INT, 20)
+        self.assertEqual(count, 10)
+        self.assertEqual(one,
+            reduce(str.__add__,[chr(0)+chr(n) for n in range(5,15)],'')
+            +('\0'*4))
+
+        one, count=cadata.tostring(val, meta, defs.DBR_STRING, 1)
+        self.assertEqual(count, 1)
+        self.assertEqual(one, '5, 6, 7, 8, 9, 10, 11, 12, 13, 14'+('\0'*7))
+
+class TestFromString(unittest.TestCase):
+    
+    def test_string(self):
+        meta = cadata.caMeta(defs.DBF_STRING)
+        val, rmeta=cadata.fromstring('hello world'+('\0'*5), meta,
+                                   defs.DBR_STRING, 1)
+        self.assertEqual(meta.dbf, defs.DBR_STRING)
+        self.assertEqual(len(val), 1)
+        self.assertEqual(val, ['hello world'])
+
+    def test_string_sts(self):
+        meta = cadata.caMeta(defs.DBF_STRING)
+        val, rmeta=cadata.fromstring('\x12\x34\x10\x20hello world'+('\0'*9), meta,
+                                   defs.DBR_STS_STRING, 1)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
+        self.assertEqual(rmeta.dbf, defs.DBF_STRING)
+        self.assertEqual(rmeta.status, 0x1234)
+        self.assertEqual(rmeta.severity, 0x1020)
+        self.assertEqual(len(val), 1)
+        self.assertEqual(val, ['hello world'])
+
+    def test_string_char(self):
+        meta = cadata.caMeta(defs.DBF_STRING)
+        print 'A'
+        val, rmeta=cadata.fromstring('hello world'+('\0'*5), meta,
+                                   defs.DBR_CHAR, 11)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
+        self.assertEqual(rmeta.dbf, defs.DBF_CHAR)
+        print 'B'
+        print val
+        self.assertEqual(len(val), 1)
+        self.assertEqual(val, ['hello world'])
 
 if __name__ == '__main__':
     #import logging
