@@ -251,6 +251,13 @@ class caMeta(object):
                 'disp:%(display)s W:%(warning)s E:%(alarm)s C:%(control)s') \
                 % self.__dict__
 
+    def __eq__(self, o):
+        for a in ['dbf', 'units', 'stamp', 'status','severity','precision', \
+                  'display', 'warning', 'alarm', 'control']:
+            if getattr(self,a)!=getattr(o,a):
+                return False
+        return True
+
 
 def tostring(value, meta, dbr, count):
     dbf, metacls = dbr_to_dbf(dbr)
@@ -283,7 +290,6 @@ def tostring(value, meta, dbr, count):
 def fromstring(raw, dbr, count, meta):
     dbf, metacls = dbr_to_dbf(dbr)
     rmeta=copy(meta)
-    rmeta.dbf=dbf
 
     vconv = dbr_convert_value(dbf, meta.dbf)
     mconv = dbr_convert_meta_value(dbf, meta.dbf)

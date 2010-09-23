@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from copy import deepcopy
 
 from array import array
 from cas import cadata
@@ -111,36 +112,35 @@ class TestToString(unittest.TestCase):
 
 class TestFromString(unittest.TestCase):
     
-    def test_string(self):
-        meta = cadata.caMeta(defs.DBF_STRING)
-        val, rmeta=cadata.fromstring('hello world'+('\0'*5),
-                                   defs.DBR_STRING, 1, meta)
+    def setUp(self):
+        self.meta=cadata.caMeta(defs.DBF_STRING)
+        self.bmeta=deepcopy(self.meta)
+    
+    def _check_value(self, val, meta):
         self.assertEqual(meta.dbf, defs.DBR_STRING)
         self.assertEqual(len(val), 1)
         self.assertEqual(val, ['hello world'])
+    
+    def test_string(self):
+        val, rmeta=cadata.fromstring('hello world'+('\0'*5),
+                                   defs.DBR_STRING, 1, self.meta)
+        self.assertEqual(self.meta, self.bmeta)
+        self._check_value(val, rmeta)
 
     def test_string_sts(self):
-        meta = cadata.caMeta(defs.DBF_STRING)
         val, rmeta=cadata.fromstring('\x12\x34\x10\x20hello world'+('\0'*9),
-                                   defs.DBR_STS_STRING, 1, meta)
-        self.assertEqual(meta.dbf, defs.DBF_STRING)
-        self.assertEqual(rmeta.dbf, defs.DBF_STRING)
+                                   defs.DBR_STS_STRING, 1, self.meta)
+        self.assertEqual(self.meta, self.bmeta)
         self.assertEqual(rmeta.status, 0x1234)
         self.assertEqual(rmeta.severity, 0x1020)
-        self.assertEqual(len(val), 1)
-        self.assertEqual(val, ['hello world'])
+        self._check_value(val, rmeta)
 
     def test_string_char(self):
-        meta = cadata.caMeta(defs.DBF_STRING)
-        self.assertEqual(meta.dbf, defs.DBF_STRING)
-
         val, rmeta=cadata.fromstring('hello world'+('\0'*5),
-                                   defs.DBR_CHAR, 11, meta)
-        self.assertEqual(meta.dbf, defs.DBF_STRING)
-        self.assertEqual(rmeta.dbf, defs.DBF_CHAR)
+                                   defs.DBR_CHAR, 11, self.meta)
+        self.assertEqual(self.meta, self.bmeta)
+        self._check_value(val, rmeta)
 
-        self.assertEqual(len(val), 1)
-        self.assertEqual(val, ['hello world'])
 
 if __name__ == '__main__':
     #import logging
