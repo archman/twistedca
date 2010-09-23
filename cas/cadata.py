@@ -13,6 +13,8 @@ from defs import *
 from convert import dbr_convert_value, dbr_convert_meta_value
 from copy import copy
 
+__all__ = ['caMeta', 'caMetaProxy', 'tostring','fromstring']
+
 ETEST=array('H',[0x1234])
 BIGENDIAN=ETEST.tostring()[0]=='\x12'
 
@@ -232,18 +234,51 @@ _limits={DBF_STRING:(None,None),
 def dbf_default_limits(dbf):
     return _limits[dbf]
 
+class caMetaProxy(object):
+    """Allow a view of another meta-data object
+    with partial copy-on-write behavior
+    """
+    def __init__(self, meta, ro=False):
+        object.__setattr__(self, '_meta', meta)
+        object.__setattr__(self, '_ro', ro)
+
+    @property
+    def ro(self):
+        return self._ro
+
+    @property
+    def meta(self):
+        return self._meta
+
+    def __getattr__(self, name):
+        return getattr(self._meta, name)
+
+    def __setattr__(self, name, val):
+        if self._ro:
+            raise TypeError('caMetaProxy in read-only mode')
+        object.__setattr__(self, name, val)
 
 class caMeta(object):
-    def __init__(self, dbf):
+    def __init__(self, dbf, **kwargs):
         self.dbf=dbf
-        self.units=''
-        self.stamp=0.0
+        self.units=kwargs.pop('units','')
+        self.stamp=kwargs.pop('stamp',0.0)
         for f in ['status','severity','precision']:
-            setattr(self, f, 0)
+            setattr(self, f, kwargs.pop(f,0))
         l=dbf_default_limits(dbf)
         for p in ['display', 'warning', 'alarm', 'control']:
-            setattr(self, p, l)
-        self.strs=[]
+            setattr(self, p, kwargs.pop(p,l))
+        self.strs=kwargs.pop('strs',[])
+        if len(kwargs)>0:
+            raise TypeError('Unexpected keyword arguments %s',str(kwargs.keys()))
+
+    @property
+    def ro(self):
+        return False
+
+    @property
+    def meta(self):
+        return self
 
     def __str__(self):
         return ('Meta dbf:%(dbf)d sts:%(status)d sev:%(severity)s '+ \

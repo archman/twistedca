@@ -213,6 +213,26 @@ class TestFromStringString(unittest.TestCase):
         self.assertEqual(self.meta, self.bmeta)
         self._check_value(val, rmeta)
 
+class TestMetaProxy(unittest.TestCase):
+    def test_cow(self):
+        m=cadata.caMeta(defs.DBF_INT)
+        p=cadata.caMetaProxy(m)
+        
+        m.stamp=5.1
+        self.assertEqual(p.stamp, 5.1)
+        p.stamp=4.9
+        self.assertEqual(m.stamp, 5.1)
+        self.assertEqual(p.stamp, 4.9)
+
+    def test_ro(self):
+        m=cadata.caMeta(defs.DBF_INT)
+        p=cadata.caMetaProxy(m, ro=True)
+        
+        m.stamp=5.1
+        self.assertEqual(p.stamp, 5.1)
+        def x():
+            p.stamp=4.9
+        self.assertRaises(TypeError, x)
 
 if __name__ == '__main__':
     #import logging
