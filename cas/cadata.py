@@ -42,19 +42,29 @@ class ValueArray(object):
 class caString(object):
 
     def pack(self,inp):
+        """In a string array each entry but the last is padded to 40 bytes.
+        The last is padded to the dword (8 byte) boundary
+        """
         assert not isinstance(inp, str), 'Must be an array of strings'
         ret=''
-        for s in inp:
-            ret=ret+padString(s)
-        return ret
+        for i,s in enumerate(inp):
+            if i==len(inp)-1:
+                ret+=s
+            else:
+                ret+=s+(40-len(s))*'\0'
+        return padString(ret)
 
     def unpack(self, bstr):
-        #TODO: how is an array of strings actually stored?
-        return [bstr.rstrip('\0')]
-        #ret=[]
-        #for i in range(len(bstr)/40):
-            #ret.append( bstr[i*40:(i+1)*40].rstrip('\0') )
-        #return ret
+        if len(bstr)==0 or bstr[0]=='\0':
+            return []
+        ret=[]
+        N=(len(bstr)/40)+1
+        for i in range(N):
+            S= bstr[i*40:(i+1)*40].rstrip('\0')
+            if len(S)==0:
+                continue
+            ret.append( S )
+        return ret
 
 # value
 dbr_string=caString()

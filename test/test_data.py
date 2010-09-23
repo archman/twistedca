@@ -53,6 +53,26 @@ class TestSerialize(unittest.TestCase):
 
     #TODO: test ctrl
 
+    def test_stringarray(self):
+        # strings padded to 40 bytes
+        raw=reduce(str.__add__,[str(i)+39*'\0' for i in range(1,10)],'')
+        # the list string is only padded to the 8 byte boundary
+        raw+='10'+6*'\0'
+
+        conv=cadata.dbr_value(defs.DBR_STRING)
+        
+        x=conv.unpack(raw)
+
+        self.assertEqual(len(x), 10)
+        self.assertEqual(x, ['1','2','3','4','5','6','7','8','9','10'])
+
+        y=conv.pack(x)
+
+        self.assertEqual(len(y), len(raw))
+        self.assertEqual(y, raw)
+
+        
+
 class TestConvert(unittest.TestCase):
 
     def _runtest(self, dbf, val, meta, expected):
