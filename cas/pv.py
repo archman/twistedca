@@ -5,33 +5,33 @@ import logging
 log=logging.getLogger('cas.pv')
 
 from defs import *
-from cadata import caValue
+from cadata import caMetaProxy, tostring, fromstring
 from error import CAError, ECA_NOCONVERT
 
 class PV(object):
     
-    def __init__(self, name, dbf, maxcount=1, value=None):
+    def __init__(self, name, value, meta, maxcount=None):
         import time
         if maxcount is None:
             maxcount=len(value)
         self._name=name
-        self.dbf=dbf
-        self.maxcount=maxcount
+        self._maxcount=maxcount
         
         self.channels=set()
 
-        self.data=caValue(dbf)
-        if value is not None:
-            self.data.value=value
-            self.data.stamp=time.time()
-
+        self.value=value
+        self.meta=meta
 
     @property
     def name(self):
         return self._name
 
+    @property
+    def maxcount(self):
+        return self._maxcount
+
     def info(self, channel):
-        return (self.dbf, self.maxcount)
+        return (self.meta.dbf, self._maxcount)
 
     def rights(self, channel):
         return 3
@@ -42,20 +42,22 @@ class PV(object):
     def disconnect(self, channel):
         self.channels.remove(channel)
 
-    def get(self, channel, dtype, count):
-        dbf, meta = dbr_to_dbf(dtype)
-        if dbf!=self.dbf:
-            raise CAError("Unsupported type conversion", ECA_NOCONVERT)
-        return self.data.tostring(dtype, count)
+    def get(self, channel, dbr, count):
+        try:
+            return tostring(self.value, self.meta, dbr, count)
+        except ValueError:
+            log.exception("type conversion failed")
+            raise CAError("type conversion failed", ECA_NOCONVERT)
 
-    def set(self, channel, data, dtype, count):
-        dbf, meta = dbr_to_dbf(dtype)
-        if dbf!=self.dbf:
-            log.error("trying to assign %d to %d",dbf,self.dbf)
-            raise CAError("Unsupported type conversion", ECA_NOCONVERT)
+    def set(self, channel, data, dbr, count):
 
-        log.info('set %s to %s',self.name,repr(data))
-        self.data.fromstring(data, dtype, count)
+        try:
+            val, rmeta = fromstring(data, dbr, count, self.meta)
+        except ValueError:
+            log.exception("type conversion failed")
+            raise CAError("type conversion failed", ECA_NOCONVERT)
+        log.info('set %s to %s',self.name,str(val))
+        self.value=val
         self.post(DBE_VALUE|DBE_LOG)
         return True
 
@@ -67,4 +69,4 @@ class PV(object):
             c.post(mask)
 
     def __str__(self):
-        return 'PV %(name)s with %(maxcount)d of %(dtype)d'%self.__dict__
+        return 'PV %(name)s with %(maxcount)d of %(meta)d'%self.__dict__

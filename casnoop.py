@@ -5,16 +5,18 @@ import logging
 
 from twisted.internet import reactor
 
+from cas.cadata import caMeta, caMetaProxy
 from cas.pv import PV
 from cas.server import Server
 from cas.defs import DBF_STRING, DBF_LONG
 
 def main():
+    lmeta=caMeta(DBF_LONG)
     
-    test=PV('test', dbf=DBF_STRING, value=['hello world'])
-    test2=PV('test2', dbf=DBF_LONG, value=[42])
-    test3=PV('test3', dbf=DBF_LONG, value=range(10), maxcount=None)
-    
+    test=PV('test', value=['hello world'], meta=caMeta(DBF_STRING))
+    test2=PV('test2', value=[42], meta=caMeta(DBF_LONG))
+    test3=PV('test3', value=range(10), meta=caMetaProxy(test2.meta))
+
     p = Server(pvs=[test,test2,test3])
     
     reactor.run()
