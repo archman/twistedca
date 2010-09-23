@@ -6,6 +6,7 @@
 
 from array import array
 from struct import Struct
+from time import time
 
 from util.ca import padString
 from defs import *
@@ -267,6 +268,7 @@ def tostring(value, meta, dbr, count):
         metadata=dbr_sts(meta.dbf).pack(meta.status, meta.severity)
         
     elif metacls==DBR_TIME:
+        s=int(meta.stamp)-POSIX_TIME_AT_EPICS_EPOCH
         ns=int((meta.stamp%1)*1e9)
         metadata=dbr_time(meta.dbf).pack(meta.status, meta.severity,
                                 int(meta.stamp), ns)
@@ -285,6 +287,7 @@ def fromstring(raw, dbr, count, meta):
 
     vconv = dbr_convert_value(dbf, meta.dbf)
     mconv = dbr_convert_meta_value(dbf, meta.dbf)
+    fields=['display', 'warning', 'alarm', 'control']
 
     if metacls==DBR_PLAIN:
         pass
@@ -297,7 +300,7 @@ def fromstring(raw, dbr, count, meta):
     elif metacls==DBR_TIME:
         conv=dbr_sts(dbf)
         rmeta.status, rmeta.severity, sec, nsec = conv.unpack(raw[:conv.size])
-        rmeta.stamp=sec+float(nsec)*1e-9
+        rmeta.stamp=sec+POSIX_TIME_AT_EPICS_EPOCH+float(nsec)*1e-9
         raw=raw[conv.size:]
 
     else:
@@ -307,5 +310,8 @@ def fromstring(raw, dbr, count, meta):
 
     value = vconv(value, prec=rmeta.precision,
                          strs=rmeta.strs)
+    for f in fields:
+        a, b = getattr(rmeta, f)
+        setattr(rmeta, f, (mconv(a), mconv(b)))
 
     return (value, rmeta)
