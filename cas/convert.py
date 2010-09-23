@@ -50,10 +50,14 @@ def printEnum(val, strs=[], **kwargs):
     return strs[val]
 
 def chooseEnum(val, strs=[], **kwargs):
-    for i,s in enumerate(strs):
-        if s==val:
-            return i
-    raise ValueError('Value is not a choice')
+    assert len(strs)>0, 'enum needs strings'
+
+    def chooseOne(v):
+        for i,s in enumerate(strs):
+            if s==v:
+                return i
+        raise ValueError('Value is not a choice')
+    return map(chooseOne, val)
 
 def str_as_carray(val, **kwargs):
     def stringify(v):
@@ -81,7 +85,7 @@ _converter_value={
             (DBF_INT,DBF_STRING)   :intprint,
             (DBF_INT,DBF_FLOAT)    :floatconv,
             #(DBF_INT,DBF_ENUM)     :_noop,
-            (DBF_INT,DBF_CHAR)     :intprint,
+            #(DBF_INT,DBF_CHAR)     :_noop,
             #(DBF_INT,DBF_LONG)     :_noop,
             (DBF_INT,DBF_DOUBLE)   :floatconv,
             (DBF_FLOAT,DBF_STRING) :floatprint,

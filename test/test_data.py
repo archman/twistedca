@@ -2,10 +2,11 @@
 
 import unittest
 from copy import deepcopy
-
 from array import array
+
 from cas import cadata
 import cas.defs as defs
+from cas.convert import dbr_convert_value, dbr_convert_meta_value
 
 class TestSerialize(unittest.TestCase):
     
@@ -51,6 +52,77 @@ class TestSerialize(unittest.TestCase):
     #TODO: test GR
 
     #TODO: test ctrl
+
+class TestConvert(unittest.TestCase):
+
+    def _runtest(self, dbf, val, meta, expected):
+        for t, v in expected:
+            conv = dbr_convert_value(dbf, t)
+            r = conv(val, **meta)
+            try:
+                self.assertEqual(r, v)
+            except AssertionError, e:
+                raise AssertionError(str(e)+' for type %d'%t)
+    
+    def test_string(self):
+        dbf=defs.DBF_STRING
+        meta={'prec':2, 'strs':['1','4']}
+        val=['4']
+        
+        fin=[(defs.DBR_STRING, ['4']),
+             (defs.DBR_INT,    [4]),
+             (defs.DBR_LONG,   [4]),
+             (defs.DBR_CHAR,   '4'),
+             (defs.DBR_FLOAT,  [4.0]),
+             (defs.DBR_DOUBLE, [4.0]),
+             (defs.DBR_ENUM,   [1]),
+            ]
+
+        self._runtest(dbf, val, meta, fin)
+
+    def test_int(self):
+        dbf=defs.DBF_INT
+        meta={'prec':2}
+        val=range(7)
+        
+        fin=[(defs.DBR_STRING, ['0, 1, 2, 3, 4, 5, 6']),
+             (defs.DBR_INT,    val),
+             (defs.DBR_LONG,   val),
+             (defs.DBR_CHAR,   val),
+             (defs.DBR_FLOAT,  map(float,val)),
+             (defs.DBR_DOUBLE,  map(float,val)),
+             (defs.DBR_ENUM,   val),
+            ]
+
+        self._runtest(dbf, val, meta, fin)
+
+    def test_double(self):
+        dbf=defs.DBF_DOUBLE
+        meta={'prec':2}
+        val=map(float, range(7))
+        
+        fin=[(defs.DBR_STRING, ['0.00, 1.00, 2.00, 3.00, 4.00, 5.00, 6.00']),
+             (defs.DBR_INT,    map(int,val)),
+             (defs.DBR_LONG,   map(int,val)),
+             (defs.DBR_CHAR,   map(int,val)),
+             (defs.DBR_FLOAT,  val),
+             (defs.DBR_DOUBLE, val),
+             (defs.DBR_ENUM,   map(int,val)),
+            ]
+
+    def test_enum(self):
+        dbf=defs.DBF_ENUM
+        meta={'prec':2, 'strs':['a','b','c']}
+        val=[2]
+        
+        fin=[(defs.DBR_STRING, ['c']),
+             (defs.DBR_INT,    [2]),
+             (defs.DBR_LONG,   [2]),
+             (defs.DBR_CHAR,   2),
+             (defs.DBR_FLOAT,  [2.0]),
+             (defs.DBR_DOUBLE, [2.0]),
+             (defs.DBR_ENUM,   [2]),
+            ]
 
 class TestToString(unittest.TestCase):
     
@@ -110,7 +182,7 @@ class TestToString(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertEqual(one, '5, 6, 7, 8, 9, 10, 11, 12, 13, 14'+('\0'*7))
 
-class TestFromString(unittest.TestCase):
+class TestFromStringString(unittest.TestCase):
     
     def setUp(self):
         self.meta=cadata.caMeta(defs.DBF_STRING)
