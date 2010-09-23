@@ -113,16 +113,16 @@ class TestFromString(unittest.TestCase):
     
     def test_string(self):
         meta = cadata.caMeta(defs.DBF_STRING)
-        val, rmeta=cadata.fromstring('hello world'+('\0'*5), meta,
-                                   defs.DBR_STRING, 1)
+        val, rmeta=cadata.fromstring('hello world'+('\0'*5),
+                                   defs.DBR_STRING, 1, meta)
         self.assertEqual(meta.dbf, defs.DBR_STRING)
         self.assertEqual(len(val), 1)
         self.assertEqual(val, ['hello world'])
 
     def test_string_sts(self):
         meta = cadata.caMeta(defs.DBF_STRING)
-        val, rmeta=cadata.fromstring('\x12\x34\x10\x20hello world'+('\0'*9), meta,
-                                   defs.DBR_STS_STRING, 1)
+        val, rmeta=cadata.fromstring('\x12\x34\x10\x20hello world'+('\0'*9),
+                                   defs.DBR_STS_STRING, 1, meta)
         self.assertEqual(meta.dbf, defs.DBF_STRING)
         self.assertEqual(rmeta.dbf, defs.DBF_STRING)
         self.assertEqual(rmeta.status, 0x1234)
@@ -132,13 +132,13 @@ class TestFromString(unittest.TestCase):
 
     def test_string_char(self):
         meta = cadata.caMeta(defs.DBF_STRING)
-        print 'A'
-        val, rmeta=cadata.fromstring('hello world'+('\0'*5), meta,
-                                   defs.DBR_CHAR, 11)
+        self.assertEqual(meta.dbf, defs.DBF_STRING)
+
+        val, rmeta=cadata.fromstring('hello world'+('\0'*5),
+                                   defs.DBR_CHAR, 11, meta)
         self.assertEqual(meta.dbf, defs.DBF_STRING)
         self.assertEqual(rmeta.dbf, defs.DBF_CHAR)
-        print 'B'
-        print val
+
         self.assertEqual(len(val), 1)
         self.assertEqual(val, ['hello world'])
 

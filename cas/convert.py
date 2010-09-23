@@ -55,97 +55,106 @@ def chooseEnum(val, strs=[], **kwargs):
             return i
     raise ValueError('Value is not a choice')
 
+def str_as_carray(val, **kwargs):
+    def stringify(v):
+        v=v[:40]
+        #v+=(40-len(v))*'\0'
+        return v
+
+    return reduce(str.__add__, map(stringify, val) ,'')
+
+def carray_as_str(val, **kwargs):
+    import array
+    if isinstance(val, array.array):
+        return [val.tostring().rstrip('\0')]
+    return [reduce(str.__add__,map(chr,val),'')]
+
 # Excludes (X,X) cases
-# (X,Y):None for special case
-_converter={(DBF_STRING,DBF_INT)   :intconv,
+# (X,Y):None when no conversion is needed
+_converter_value={
+            (DBF_STRING,DBF_INT)   :intconv,
             (DBF_STRING,DBF_FLOAT) :floatconv,
             (DBF_STRING,DBF_ENUM)  :chooseEnum,
-            (DBF_STRING,DBF_CHAR)  :None, # convert to char array
+            (DBF_STRING,DBF_CHAR)  :str_as_carray,
             (DBF_STRING,DBF_LONG)  :intconv,
             (DBF_STRING,DBF_DOUBLE):floatconv,
             (DBF_INT,DBF_STRING)   :intprint,
             (DBF_INT,DBF_FLOAT)    :floatconv,
-            (DBF_INT,DBF_ENUM)     :_noop,
+            #(DBF_INT,DBF_ENUM)     :_noop,
             (DBF_INT,DBF_CHAR)     :intprint,
-            (DBF_INT,DBF_LONG)     :_noop,
+            #(DBF_INT,DBF_LONG)     :_noop,
             (DBF_INT,DBF_DOUBLE)   :floatconv,
             (DBF_FLOAT,DBF_STRING) :floatprint,
             (DBF_FLOAT,DBF_INT)    :intconv,
-            (DBF_FLOAT,DBF_ENUM)   :_noop,
+            (DBF_FLOAT,DBF_ENUM)   :intconv,
             (DBF_FLOAT,DBF_CHAR)   :intprint,
-            (DBF_FLOAT,DBF_LONG)   :_noop,
-            (DBF_FLOAT,DBF_DOUBLE) :floatconv,
+            (DBF_FLOAT,DBF_LONG)   :intconv,
+            #(DBF_FLOAT,DBF_DOUBLE) :_noop,
             (DBF_ENUM,DBF_STRING)  :printEnum,
-            (DBF_ENUM,DBF_INT)     :_noop,
+            #(DBF_ENUM,DBF_INT)     :_noop,
             (DBF_ENUM,DBF_FLOAT)   :floatconv,
-            (DBF_ENUM,DBF_CHAR)    :_noop, #BUG: return char array?
-            (DBF_ENUM,DBF_LONG)    :_noop,
+            #(DBF_ENUM,DBF_CHAR)    :_noop, #BUG: return char array?
+            #(DBF_ENUM,DBF_LONG)    :_noop,
             (DBF_ENUM,DBF_DOUBLE)  :floatconv,
-            (DBF_CHAR,DBF_STRING)  :None, # convert from char array,
-            (DBF_CHAR,DBF_INT)     :intprint,
+            (DBF_CHAR,DBF_STRING)  :carray_as_str,
+            #(DBF_CHAR,DBF_INT)     :_noop,
             (DBF_CHAR,DBF_FLOAT)   :floatconv,
-            (DBF_CHAR,DBF_ENUM)    :_noop, #BUG: interpret as string?
-            (DBF_CHAR,DBF_LONG)    :_noop,
+            #(DBF_CHAR,DBF_ENUM)    :_noop, #BUG: interpret as string?
+            #(DBF_CHAR,DBF_LONG)    :_noop,
             (DBF_CHAR,DBF_DOUBLE)  :floatconv,
             (DBF_LONG,DBF_STRING)  :intprint,
-            (DBF_LONG,DBF_INT)     :_noop,
+            #(DBF_LONG,DBF_INT)     :_noop,
             (DBF_LONG,DBF_FLOAT)   :floatconv,
-            (DBF_LONG,DBF_ENUM)    :_noop,
-            (DBF_LONG,DBF_CHAR)    :intprint,
+            #(DBF_LONG,DBF_ENUM)    :_noop,
+            #(DBF_LONG,DBF_CHAR)    :_noop,
             (DBF_LONG,DBF_DOUBLE)  :floatconv,
             (DBF_DOUBLE,DBF_STRING):floatprint,
             (DBF_DOUBLE,DBF_INT  ) :intconv,
-            (DBF_DOUBLE,DBF_FLOAT) :_noop,
+            #(DBF_DOUBLE,DBF_FLOAT) :_noop,
+            (DBF_DOUBLE,DBF_ENUM)  :floatconv,
+            (DBF_DOUBLE,DBF_CHAR)  :intconv,
+            (DBF_DOUBLE,DBF_LONG)  :intconv,
+           }
+def dbr_convert_value(from_dbf, to_dbf):
+    return _converter_value.get((from_dbf, to_dbf), _noop)
+
+def store_zero(val, **kwargs):
+    return 0
+
+def store_none(val, **kwargs):
+    return None
+
+_converter_meta={
+            (DBF_STRING,DBF_INT)   :store_zero,
+            (DBF_STRING,DBF_FLOAT) :store_zero,
+            (DBF_STRING,DBF_ENUM)  :store_zero,
+            (DBF_STRING,DBF_CHAR)  :store_zero,
+            (DBF_STRING,DBF_LONG)  :store_zero,
+            (DBF_STRING,DBF_DOUBLE):store_zero,
+            (DBF_INT,DBF_STRING)   :store_none,
+            (DBF_INT,DBF_FLOAT)    :floatconv,
+            (DBF_INT,DBF_CHAR)     :intprint,
+            (DBF_INT,DBF_DOUBLE)   :floatconv,
+            (DBF_FLOAT,DBF_STRING) :store_none,
+            (DBF_FLOAT,DBF_INT)    :intconv,
+            (DBF_FLOAT,DBF_ENUM)   :intconv,
+            (DBF_FLOAT,DBF_CHAR)   :intprint,
+            (DBF_FLOAT,DBF_LONG)   :intconv,
+            (DBF_ENUM,DBF_STRING)  :store_none,
+            (DBF_ENUM,DBF_FLOAT)   :floatconv,
+            (DBF_ENUM,DBF_DOUBLE)  :floatconv,
+            (DBF_CHAR,DBF_STRING)  :store_none,
+            (DBF_CHAR,DBF_FLOAT)   :floatconv,
+            (DBF_CHAR,DBF_DOUBLE)  :floatconv,
+            (DBF_LONG,DBF_STRING)  :store_none,
+            (DBF_LONG,DBF_FLOAT)   :floatconv,
+            (DBF_LONG,DBF_DOUBLE)  :floatconv,
+            (DBF_DOUBLE,DBF_STRING):store_none,
+            (DBF_DOUBLE,DBF_INT  ) :intconv,
             (DBF_DOUBLE,DBF_ENUM)  :floatconv,
             (DBF_DOUBLE,DBF_CHAR)  :intconv,
             (DBF_DOUBLE,DBF_LONG)  :intconv,
            }
 
-def visitAllValues(val, conv, **kwargs):
-    for f in ['display', 'warning', 'alarm', 'control']:
-        u, l = getattr(val,f)
-        u, l = conv(u, **kwargs), conv(l, **kwargs)
-
-def dbr_convert(dbf, val, meta):
-    """Return a partial copy of the the given caValue
-    with converted to a different native field
-    type.
-    
-    The returned structure should not be modified as this
-    may cause modifications to the original value.
-    
-    @returns: (val, meta)
-    """
-
-    rmeta=copy(meta) # shallow copy
-    
-    if meta.dbf==dbf:
-        return (copy(val), rmeta)
-    
-    conv=_converter[(meta.dbf,dbf)]
-    print (meta.dbf,dbf),conv
-
-    if conv is None:
-        # special cases
-        if (meta.dbf,dbf)==(DBF_STRING,DBF_CHAR):
-            # clear associated
-
-            visitAllValues(rmeta, lambda _: 0)
-            ret=reduce(str.__add__,val,'')
-            
-            
-        elif (meta.dbf,dbf)==(DBF_CHAR,DBF_STRING):
-            visitAllValues(rmeta, lambda _: None)
-            ret=[val[i:(i+40)] for i in range(0,len(val),40)]
-
-        rmeta.dbf=dbf
-        return (copy(ret), rmeta)
-
-    visitAllValues(rmeta, conv,
-                   prec=meta.precision,
-                   strs=meta.strs)
-    ret=conv(val, prec=meta.precision,
-             strs=meta.strs)
-
-    rmeta.dbf=dbf
-    return (copy(ret), rmeta)
+def dbr_convert_meta_value(from_dbf, to_dbf):
+    return _converter_meta.get((from_dbf, to_dbf), _noop)

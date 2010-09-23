@@ -9,7 +9,8 @@ from struct import Struct
 
 from util.ca import padString
 from defs import *
-from convert import dbr_convert
+from convert import dbr_convert_value, dbr_convert_meta_value
+from copy import copy
 
 ETEST=array('H',[0x1234])
 BIGENDIAN=ETEST.tostring()[0]=='\x12'
@@ -253,7 +254,11 @@ class caMeta(object):
 def tostring(value, meta, dbr, count):
     dbf, metacls = dbr_to_dbf(dbr)
 
-    value, meta = dbr_convert(dbf, value, meta)
+    vconv = dbr_convert_value(meta.dbf, dbf)
+    mconv = dbr_convert_meta_value(meta.dbf, dbf)
+
+    value = vconv(value, prec=meta.precision,
+                         strs=meta.strs)
 
     metadata=''
     if metacls==DBR_PLAIN:
@@ -269,12 +274,17 @@ def tostring(value, meta, dbr, count):
     else:
         raise RuntimeError('meta data format not supported')
 
-    data=dbr_value(meta.dbf).pack(value[:count])
+    data=dbr_value(dbf).pack(value[:count])
+
     return (padString(metadata+data), len(value[:count]))
 
-def fromstring(raw, meta, dbr, count):
+def fromstring(raw, dbr, count, meta):
     dbf, metacls = dbr_to_dbf(dbr)
-    rmeta=caMeta(dbf)
+    rmeta=copy(meta)
+    rmeta.dbf=dbf
+
+    vconv = dbr_convert_value(dbf, meta.dbf)
+    mconv = dbr_convert_meta_value(dbf, meta.dbf)
 
     if metacls==DBR_PLAIN:
         pass
@@ -294,7 +304,8 @@ def fromstring(raw, meta, dbr, count):
         raise RuntimeError('meta data format not supported')
 
     value = dbr_value(dbf).unpack(raw)
-    print value
-    value, rmeta = dbr_convert(dbf, value, rmeta)
+
+    value = vconv(value, prec=rmeta.precision,
+                         strs=rmeta.strs)
 
     return (value, rmeta)
