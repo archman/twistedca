@@ -244,9 +244,9 @@ class caMeta(object):
         self.strs=[]
 
     def __str__(self):
-        return ('Meta %(dbf)d %(status)d %(severity)s '+ \
-                '%(stamp)f %(units)s %(precision)d '+ \
-                '%(display)s %(warning)s %(alarm)s %(control)s') \
+        return ('Meta dbf:%(dbf)d sts:%(status)d sev:%(severity)s '+ \
+                'ts:%(stamp)f egu:%(units)s prec:%(precision)d '+ \
+                'disp:%(display)s W:%(warning)s E:%(alarm)s C:%(control)s') \
                 % self.__dict__
 
 
