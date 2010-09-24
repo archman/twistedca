@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import socket, logging, sys
-from socket import INADDR_LOOPBACK
+from socket import INADDR_LOOPBACK, inet_aton
 from copy import copy
+from struct import Struct
+
+ipv4=Struct('!I')
 
 log=logging.getLogger('cac.repeater')
 
@@ -75,10 +78,13 @@ class CARepeaterProtocol(DatagramProtocol):
         
             pkt, msg = CAmessage.unpack(msg)
 
-            if pkt.cmd!=24:
+            if pkt.cmd==24:
+                self.regreq(peer)
+            elif pkt.cmd==13 and pkt.p2==0:
+                pkt.p2=ipv4.unpack(inet_aton(peer[0]))[0]
                 self.repeat(pkt)
             else:
-                self.regreq(peer)
+                self.repeat(pkt)
 
 def main():
     try:

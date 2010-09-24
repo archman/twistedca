@@ -79,7 +79,10 @@ class Server(object):
         for up, tp in self.interfaces:
             host = tp.getHost()
 
-            b.p2=ipv4.unpack(inet_aton(host.host))[0]
+            # Interface address will be added by receiving
+            # CA repeater
+            #b.p2=ipv4.unpack(inet_aton(host.host))[0]
+
             b.dtype=host.port
 
             #TODO: introspect interfaces
