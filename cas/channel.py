@@ -83,7 +83,8 @@ class Channel(object):
                 pkt.p1=e.code
                 pkt.body=''
 
-        self.circuit.send(pkt.pack())
+        if pkt.cmd==19:
+            self.circuit.send(pkt.pack())
 
     def monitoradd(self, pkt, peer, circuit):
 
