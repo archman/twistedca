@@ -59,8 +59,8 @@ class Server(object):
         self.closeList=set()
 
         self.beaconID=0
-        self.beaconTask=LoopingCall(self.sendBeacon)
-        self.beaconTask.start(15.0)
+        self.beaconWait=0.02
+        reactor.callLater(self.beaconWait,self.sendBeacon)
 
     def close(self):
         from copy import copy
@@ -86,6 +86,9 @@ class Server(object):
             up.write(b.pack(), ('255.255.255.255', CLIENT_PORT))
 
         self.beaconID=self.beaconID+1
+        if self.beaconWait<30:
+            self.beaconWait=min(self.beaconWait*2.0, 30)
+        reactor.callLater(self.beaconWait,self.sendBeacon)
 
     def dispatchudp(self, pkt, peer, endpoint):
         fn=self._udp.get(pkt.cmd, self.unknown)
