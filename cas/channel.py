@@ -3,8 +3,8 @@
 import logging
 from pv import CAError
 from util.ca import CAmessage, padString, packCAerror, monitormask
-from error import ECA_NORMAL, ECA_BADCHID
-import error
+from util.error import ECA_NORMAL, ECA_BADCHID
+from util import error
 
 log=logging.getLogger('cas.channel')
 

@@ -11,7 +11,7 @@ from endpoint import UDPpeer, CAcircuit
 from util.ca import CAmessage, packSearchBody
 from util.udp import SharedUDP
 from socket import inet_aton
-from defs import *
+from util.defs import *
 
 from struct import Struct
 

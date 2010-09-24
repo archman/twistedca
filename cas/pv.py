@@ -4,9 +4,9 @@ import logging
 
 log=logging.getLogger('cas.pv')
 
-from defs import *
-from cadata import caMetaProxy, tostring, fromstring
-from error import CAError, ECA_NOCONVERT
+from util.defs import *
+from util.cadata import caMetaProxy, tostring, fromstring
+from util.error import CAError, ECA_NOCONVERT
 
 class PV(object):
     

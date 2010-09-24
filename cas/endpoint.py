@@ -3,7 +3,7 @@
 import socket, logging
 from util.ca import CAmessage
 from channel import Channel
-import defs
+from util import defs
 from copy import copy
 
 from twisted.internet.protocol import Protocol, DatagramProtocol
