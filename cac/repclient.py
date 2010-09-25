@@ -70,7 +70,7 @@ class RepClient(DatagramProtocol):
 class RepManager(object):
     
     def __init__(self, port=CLIENT_PORT):
-        self._port=reactor.listenUDP(0, RepClient())
+        self._port=reactor.listenUDP(0, RepClient(), 'localhost')
         
         self._watcher=LoopingCall(self.check)
         self._watcher.start(30.0, now=False)
