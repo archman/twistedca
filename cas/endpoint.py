@@ -179,4 +179,4 @@ class UDPpeer(DatagramProtocol):
             self.handler(pkt, peer, self)
 
         if len(msg)>0:
-            log.warning('dropping incomplete message')
+            log.warning('dropping incomplete message %s',repr(msg))

@@ -1,0 +1,155 @@
+# -*- coding: utf-8 -*-
+
+import logging, socket
+log=logging.getLogger('cac.resolver')
+from errno import EPERM
+
+from twisted.internet import reactor
+from twisted.internet.protocol import Protocol, DatagramProtocol
+from twisted.internet.defer import Deferred
+from twisted.internet.udp import Port
+
+from util.defs import SERVER_PORT, CA_VERSION
+from util.config import Config
+from util.ca import CAmessage, searchbody, padString
+from util.ifinspect import getifinfo
+from cas.endpoint import UDPpeer
+
+class Request(object):
+    
+    def __init__(self, name, id, manager):
+        self.name, self.id, self.manager=name, id, manager
+
+        self.d=Deferred()
+        
+        self.wait=0.04
+        self.T=None
+        self.Skip=set()
+        
+        nbody=padString(name)
+        self.msg=CAmessage(cmd=0, count=CA_VERSION).pack()
+        self.msg+=CAmessage(cmd=6, size=len(nbody), dtype=5,
+                           count=CA_VERSION,
+                           p1=id, p2=id, body=nbody
+                          ).pack()
+
+        self.lookup()
+        self.d.addErrback(self.cancel)
+
+    def lookup(self):
+        self.manager._query(self)
+        self.T=reactor.callLater(self.wait, self.lookup)
+        self.wait=min(self.wait*2, 30.0)
+
+    def received(self, srv):
+        if self.T is not None:
+            self.T.cancel()
+            self.T=None
+        self.d.callback(srv)
+
+    def cancel(self, _):
+        if self.T is not None:
+            self.T.cancel()
+            self.T=None
+        self.manager._cancel(self)
+
+class Resolver(object):
+    
+    def __init__(self, client=None, conf=Config()):
+        self.client=client
+
+        self._udp=Port(0, UDPpeer(self._udp, 0))
+        self._udp.startListening()
+        self._udp.getHandle().setsockopt(socket.SOL_SOCKET,
+                                    socket.SO_BROADCAST, 1)
+
+        self.nextID=0
+        # requests indexed by id and name
+        self.reqID={}
+        self.reqName={}
+
+        self.addrs=set()
+        if conf.autoaddrs:
+            for intr in getifinfo():
+                addr=(intr.broadcast, conf.sport)
+                if intr.broadcast is None:
+                    continue
+                self.addrs.append(addr)
+
+        for addr in conf.addrs:
+            self.addrs.add(addr)
+
+    def lookup(self, name):
+        req=self.reqName.get(name)
+        
+        if req is None:
+            req=Request(name, self.nextID, self)
+            self.reqID[req.id]=req
+            self.reqName[req.name]=req
+            
+            while self.nextID in self.reqID:
+                self.nextID+=1
+
+        return req.d
+
+    def _cancel(self, req):
+        self.reqID.pop(req.id)
+        self.reqName.pop(req.name)
+
+    def _query(self, req):
+
+        # UDP endpoints
+        for addr in self.addrs:
+
+            try:
+                self._udp.write(req.msg, addr)
+            except socket.error, e:
+                if e.errno!=EPERM:
+                    raise
+
+        #TODO: TCP endpoints
+
+    def _udp(self, pkt, srv, _):
+        if pkt.cmd==6:
+            
+            req=self.reqID.pop(pkt.p2)
+            if req is None:
+                log.warning('Ignored reply for non-existent search')
+                return
+            self.reqName.pop(req.name)
+
+            req.received(srv)
+
+        elif pkt.cmd==14:
+            
+            req=self.reqID.get(pkt.p2)
+            if req is None:
+                log.warning('Ignored reply for non-existent search')
+                return
+
+            # exclude from future searches
+            req.Skip.add(srv)
+
+        else:
+            log.warning('Name receiver ignored unexpected msg %u',pkt.cmd)
+
+def test():
+    logging.basicConfig(format='%(message)s',level=logging.DEBUG)
+    
+    r=Resolver()
+    
+    def start(name):
+        dx=r.lookup(name)
+        dx.addCallback(found, name)
+
+    def found(srv, name):
+        print 'found',name,'on',srv
+        reactor.callLater(5, start, name)
+    
+    start('test')
+    start('test2')
+
+    reactor.run()
+
+if __name__=='__main__':
+    test()
