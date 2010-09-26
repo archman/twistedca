@@ -8,6 +8,8 @@ from copy import copy
 
 from twisted.internet.protocol import Protocol, DatagramProtocol
 
+from util.config import Config
+
 log=logging.getLogger('cas.endpoint')
 
 class CAcircuit(Protocol):
@@ -46,7 +48,7 @@ class CAcircuit(Protocol):
     # CA actions
 
     def caver(self, pkt, x, y):
-        self.version=pkt.count
+        self.version=min(defs.CA_VERSION, pkt.count)
         self.prio=pkt.dtype
         log.debug('Version %s',self)
 
@@ -164,7 +166,7 @@ class CAcircuit(Protocol):
 
 class UDPpeer(DatagramProtocol):
     
-    def __init__(self, handler, tcpport=defs.SERVER_PORT):
+    def __init__(self, handler, tcpport=Config.default.sport):
         self.handler, self.tcpport=handler, tcpport
 
     def sendto(self, msg, peer):

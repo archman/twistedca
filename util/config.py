@@ -28,8 +28,10 @@ Config.default=Config(next=None)
 def _build_defaultconfig():
     c={'sport':SERVER_PORT,
        'cport':CLIENT_PORT,
-       'addrs':[('127.0.0.1',SERVER_PORT)],
-       'autoaddrs':False
+       'addrs':[('127.0.0.1',SERVER_PORT)], # client address list
+       'autoaddrs':True,
+       'srvaddrs':[], 'srvignoreaddrs':[], 'srvautoaddrs':True,
+       'beaconaddrs':['127.0.0.1'], 'beaconautoaddrs':True,
       }
     
     Config.default._props=c

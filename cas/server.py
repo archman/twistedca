@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import logging
+import logging, socket
 log=logging.getLogger('cas.server')
+from errno import EPERM, EINVAL
 
 from twisted.internet import reactor,tcp,protocol
 from twisted.internet.task import LoopingCall
@@ -12,6 +13,8 @@ from util.ca import CAmessage, packSearchBody
 from util.udp import SharedUDP
 from socket import inet_aton
 from util.defs import *
+from util.config import Config
+from util.ifinspect import getifinfo
 
 from struct import Struct
 
@@ -19,35 +22,61 @@ ipv4=Struct('!I')
 
 class Server(object):
     
-    def __init__(self, interfaces=[('localhost',SERVER_PORT)],
+    def __init__(self, conf=Config.default,
                  pvs=[], reactor=reactor):
         self.reactor=reactor
         self.interfaces=[]
+        self.sport, self.cport=conf.sport, conf.cport
 
         self.tcpfactory=protocol.ServerFactory()
         self.tcpfactory.protocol=CAcircuit
         self.tcpfactory.server=self
 
-        for addr, tcpport in interfaces:
+        # fill server address
+        addrs=set()
+        if conf.srvautoaddrs:
+            for intr in getifinfo():
+                if intr in conf.srvignoreaddrs:
+                    continue
+                addrs.add(intr.addr)
+
+        for addr in conf.srvaddrs:
+            addrs.add(addr)
+
+        # fill beacon address list
+        self.becdests=set()
+        if conf.beaconautoaddrs:
+            for intr in getifinfo():
+                if intr.broadcast is None:
+                    continue
+                self.becdests.add(intr.broadcast)
+
+        for addr in conf.beaconaddrs:
+            self.becdests.add(addr)
+
+
+        for addr in addrs:
             try:
-                tp=reactor.listenTCP(tcpport,
+                tp=reactor.listenTCP(self.sport,
                                     self.tcpfactory,
                                     interface=addr)
             except CannotListenError:
-                # try non-standard port
+                # if the requested port is in use
+                # fall back to another
                 tp=reactor.listenTCP(0,
                                     self.tcpfactory,
                                     interface=addr)
                 tcpport=tp.getHost().port
-                log.warning('Server running on non-standard port %d',tcpport)
+                log.warning('Server running on non-standard port %d on %s',
+                            tcpport, addr)
 
-            up=SharedUDP(SERVER_PORT,
-                         UDPpeer(self.dispatchudp,tcpport),
-                         interface=addr,
-                         reactor=reactor)
-            up.startListening()
+            self.interfaces.append(tp)
 
-            self.interfaces.append((up,tp))
+        self.up=SharedUDP(conf.sport,
+                        UDPpeer(self.dispatchudp,self.sport),
+                        interface=addr,
+                        reactor=reactor)
+        self.up.startListening()
 
         self._udp={0:self.ignore,6:self.nameres}
         self._tcp={}
@@ -69,24 +98,27 @@ class Server(object):
         # of closeList to change
         for c in copy(self.closeList):
             c()
-        for up, tp in self.interfaces:
-            up.stopListening()
+
+        self.up.stopListening()
+        for tp in self.interfaces:
             tp.stopListening()
 
     def sendBeacon(self):
-        b = CAmessage(cmd=13, p1=self.beaconID)
+        b = CAmessage(cmd=13, dtype=self.sport, p1=self.beaconID).pack()
 
-        for up, tp in self.interfaces:
-            host = tp.getHost()
+        for intr in self.becdests:
 
             # Interface address will be added by receiving
             # CA repeater
             #b.p2=ipv4.unpack(inet_aton(host.host))[0]
 
-            b.dtype=host.port
-
-            #TODO: introspect interfaces
-            up.write(b.pack(), ('255.255.255.255', CLIENT_PORT))
+            try:
+                self.up.write(b, (intr, self.cport))
+            except socket.error, e:
+                #TODO: Why is this raising EINVAL for some bcast?
+                #print repr(b), (intr, self.cport)
+                if e.errno not in (EPERM, EINVAL):
+                    raise
 
         self.beaconID=self.beaconID+1
         if self.beaconWait<30:
