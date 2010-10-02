@@ -69,4 +69,6 @@ class PV(object):
             c.post(mask)
 
     def __str__(self):
-        return 'PV %(name)s with %(maxcount)d of %(meta)d'%self.__dict__
+        vals={'dbf':self.meta.dbf}
+        vals.update(self.__dict__)
+        return 'PV %(_name)s with %(_maxcount)d of %(dbf)d'%vals

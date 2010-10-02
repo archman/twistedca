@@ -121,7 +121,7 @@ class Channel(object):
 
     def __str__(self):
         return 'Channel %(sid)s to %(peer)s for %(pv)s' % \
-            {'sid':self.sid, 'peer':self.circuit.peer, 'pv':self.pv.name}
+            {'sid':self.sid, 'peer':self.circuit.peer, 'pv':self.pv}
 
 class monitor(object):
     
