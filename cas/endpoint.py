@@ -85,6 +85,7 @@ class CAcircuit(Protocol):
 
         if pv is None:
             # PV does not exist
+            log.debug("Can't create channel for non-existant PV %s",name)
             fail = CAmessage(cmd=26, p1=pkt.p1)
             self.send(fail.pack())
             return

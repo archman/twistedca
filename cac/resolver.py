@@ -8,12 +8,17 @@ from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, DatagramProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.udp import Port
+from twisted.python.failure import Failure
 
 from util.defs import SERVER_PORT, CA_VERSION
 from util.config import Config
 from util.ca import CAmessage, searchbody, padString
 from util.ifinspect import getifinfo
 from cas.endpoint import UDPpeer
+    
+class Cancelled(Exception):
+    pass
+requestCancelled=Failure(Cancelled)
 
 class Request(object):
     
@@ -74,10 +79,19 @@ class Resolver(object):
                 addr=(intr.broadcast, conf.sport)
                 if intr.broadcast is None:
                     continue
-                self.addrs.append(addr)
+                self.addrs.add(addr)
 
         for addr in conf.addrs:
             self.addrs.add(addr)
+
+    def close(self):
+        self._udp.stopListening()
+
+        for req in self.reqID.values():
+            req.d.errback(requestCancelled)
+            
+        assert len(self.reqID)==0
+        assert len(self.reqName)==0
 
     def lookup(self, name):
         req=self.reqName.get(name)
@@ -143,6 +157,8 @@ def test():
         dx.addCallback(found, name)
 
     def found(srv, name):
+        if srv is None:
+            return
         print 'found',name,'on',srv
         reactor.callLater(5, start, name)
     
