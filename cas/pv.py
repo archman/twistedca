@@ -46,8 +46,8 @@ class PV(object):
         try:
             return tostring(self.value, self.meta, dbr, count)
         except ValueError:
-            log.exception("type conversion failed")
-            raise CAError("type conversion failed", ECA_NOCONVERT)
+            # when no conversion is possible rsrv returns 0
+            return tostring([0]*count, self.meta, dbr, count)
 
     def set(self, channel, data, dbr, count):
 
