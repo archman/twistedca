@@ -15,9 +15,10 @@ def main():
     def channelCB(chan, status):
         print chan
 
-    def data(result):
-        print 'Data Received',result
-        return result
+    def data(data, pv, dbf):
+        value,meta=data
+        print pv,dbf,value
+        return data
 
     def stop(x):
         reactor.stop()
@@ -29,16 +30,15 @@ def main():
         chan=CAClientChannel(pv, channelCB)
 
         for dbr, count, dbf in [(DBR_STRING, 1  , None),
-                                (DBR_INT   , 100, DBF_STRING),
-                                (DBR_INT   , 100, None),
-                                (DBR_INT   , 100, DBF_DOUBLE),
-                                (DBF_DOUBLE   , 100, DBR_INT),
-                                (DBF_DOUBLE   , 100, None),
+                                (DBR_INT   , None, DBF_STRING),
+                                (DBR_INT   , None, None),
+                                (DBR_INT   , None, DBF_DOUBLE),
+                                (DBF_DOUBLE   , None, DBR_INT),
+                                (DBF_DOUBLE   , None, None),
                                ]:
             gets.append(CAGet(chan, dbr, count, dbf).data)
 
-    for d in gets:
-        d.addCallback(data)
+            gets[-1].addCallback(data, pv, dbr)
 
     done=DeferredList(gets)
     done.addBoth(stop)

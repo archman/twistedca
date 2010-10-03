@@ -12,7 +12,7 @@ from util.ca import CAmessage
 
 class CAGet(object):
     
-    def __init__(self, channel, dbr, count, dbf=None):
+    def __init__(self, channel, dbr, count=None, dbf=None):
         self._chan, self.dbr, self.count = channel, dbr, count
         self.ioid=None
 
@@ -38,12 +38,13 @@ class CAGet(object):
     def _chanOk(self, chan):
         assert self._chan is chan
 
-        log.debug("Channel %s get %d of %d",
-                  chan.name, self.count, self.dbr)
-
         self.ioid=chan._circ.pendingActions.add(self)
 
-        msg=CAmessage(cmd=15, dtype=self.dbr, count=self.count,
+        cnt=self.count
+        if cnt is None:
+            cnt=chan.maxcount
+
+        msg=CAmessage(cmd=15, dtype=self.dbr, count=cnt,
                       p1=chan.sid, p2=self.ioid).pack()
         chan._circ.send(msg)
 
@@ -71,4 +72,5 @@ class CAGet(object):
         self.done=True
 
     def __str__(self):
-        return 'Get %d of %d from %s'%(self.count, self.dbr, self._chan)
+        cnt='Native' if self.count is None else self.count
+        return 'Get %s of %s from %s'%(cnt, self.dbr, self._chan)
