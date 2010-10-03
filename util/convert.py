@@ -26,7 +26,7 @@ def floatconv(val, **kwargs):
         
 def intprint(val, **kwargs):
     # use normal list printing and strip off the brackets
-    return [str(val)[1:-1]]
+    return [str(list(val))[1:-1]]
 
 def floatprint(val, prec=None, **kwargs):
     if prec is None:

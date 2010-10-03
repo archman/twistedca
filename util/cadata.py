@@ -95,6 +95,18 @@ def dbr_value(type):
     """
     return _dbr_value[type]
 
+_dbf_element_size={DBF_STRING:40,
+                   DBF_INT   :2,
+                   DBF_SHORT :2,
+                   DBF_FLOAT :4,
+                   DBF_ENUM  :2,
+                   DBF_CHAR  :1,
+                   DBF_LONG  :4,
+                   DBF_DOUBLE:8
+                  }
+def dbf_element_size(dbf):
+    return _dbf_element_size[dbf]
+
 # status, severity
 dbr_sts_default=Struct('!hh')
 dbr_sts_char=Struct('!hhx')
@@ -356,6 +368,11 @@ def fromstring(raw, dbr, count, meta):
 
     else:
         raise RuntimeError('meta data format not supported')
+
+    if dbf!=DBF_STRING:
+        # remove zero padding
+        dlen=dbf_element_size(dbf)*count
+        raw=raw[:dlen]
 
     value = dbr_value(dbf).unpack(raw)
 
