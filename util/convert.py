@@ -37,7 +37,7 @@ def floatprint(val, prec=None, **kwargs):
     def _helper(a,b):
         if len(a)>0:
             a=a+', '
-        return spec%val
+        return a+spec%b
 
     if not hasattr(val, '__len__'):
         val=[val]

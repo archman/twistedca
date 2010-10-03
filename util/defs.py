@@ -145,6 +145,8 @@ _DBF2DBR={}
 for k,v in _DBR2DBF.iteritems():
     if v[0] is None:
         continue
+    if v in _DBF2DBR and k >= _DBF2DBR[v]:
+        continue # for dups use lower
     _DBF2DBR[v]=k
-def dbf_to_dbr(dbf):
-    return _DBF2DBR[dbf]
+def dbf_to_dbr(dbf, meta):
+    return _DBF2DBR[(dbf, meta)]

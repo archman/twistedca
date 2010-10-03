@@ -361,7 +361,7 @@ def fromstring(raw, dbr, count, meta):
         raw=raw[conv.size:]
 
     elif metacls==META.TIME:
-        conv=dbr_sts(dbf)
+        conv=dbr_time(dbf)
         rmeta.status, rmeta.severity, sec, nsec = conv.unpack(raw[:conv.size])
         rmeta.stamp=sec+POSIX_TIME_AT_EPICS_EPOCH+float(nsec)*1e-9
         raw=raw[conv.size:]
