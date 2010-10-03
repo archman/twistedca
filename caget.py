@@ -8,7 +8,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import DeferredList
 from cac.clichannel import CAClientChannel
 from cac.get import CAGet
-from util.defs import DBR_STRING, DBR_INT, DBF_STRING
+from util.defs import *
 
 def main():
 
@@ -23,12 +23,19 @@ def main():
         reactor.stop()
         return x
 
-    chan=CAClientChannel(sys.argv[1], channelCB)
-
     gets=[]
 
-    gets.append(CAGet(chan, DBR_STRING, 1).data)
-    gets.append(CAGet(chan, DBR_INT, 100, dbf=DBF_STRING).data)
+    for pv in sys.argv[1:]:
+        chan=CAClientChannel(pv, channelCB)
+
+        for dbr, count, dbf in [(DBR_STRING, 1  , None),
+                                (DBR_INT   , 100, DBF_STRING),
+                                (DBR_INT   , 100, None),
+                                (DBR_INT   , 100, DBF_DOUBLE),
+                                (DBF_DOUBLE   , 100, DBR_INT),
+                                (DBF_DOUBLE   , 100, None),
+                               ]:
+            gets.append(CAGet(chan, dbr, count, dbf).data)
 
     for d in gets:
         d.addCallback(data)

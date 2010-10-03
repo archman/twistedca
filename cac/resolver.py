@@ -3,6 +3,7 @@
 import logging, socket
 log=logging.getLogger('cac.resolver')
 from errno import EPERM
+from copy import copy
 
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, DatagramProtocol
@@ -39,7 +40,6 @@ class Request(object):
                           ).pack()
 
         self.lookup()
-        self.d.addErrback(self.cancel)
 
     def lookup(self):
         self.manager._query(self)
@@ -52,11 +52,13 @@ class Request(object):
             self.T=None
         self.d.callback(srv)
 
-    def cancel(self, _):
+    def cancel(self, err):
         if self.T is not None:
             self.T.cancel()
             self.T=None
         self.manager._cancel(self)
+        self.d.errback(requestCancelled)
+        return err
 
 class Resolver(object):
     
@@ -87,8 +89,9 @@ class Resolver(object):
     def close(self):
         self._udp.stopListening()
 
-        for req in self.reqID.values():
-            req.d.errback(requestCancelled)
+        # req.cancel() will modify reqID
+        for req in copy(self.reqID.values()):
+            req.cancel()
             
         assert len(self.reqID)==0
         assert len(self.reqName)==0

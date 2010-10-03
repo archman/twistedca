@@ -4,7 +4,7 @@ import logging
 log=logging.getLogger('cac.clichannel')
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks, succeed, fail
+from twisted.internet.defer import Deferred, succeed, fail
 
 from util.defs import DBR_TIME
 from client import CAClient
@@ -21,6 +21,7 @@ class CAClientChannel(object):
         self._conCB, self._ctxt=connectCB, context
         self._eventDis=Deferred()
         self._eventCon=None
+        self._d=None
 
         self._chan={18:self._channelOk,
                     22:self._rights,
@@ -31,69 +32,76 @@ class CAClientChannel(object):
         self._reset()
 
     def close(self):
+        if self._d:
+            self._d.errback()
+
         self._eventDis.callback(self)
         self._eventCon=Deferred()
 
-        self.cid=self.sid=self.dbr=self._d=None
-        self._circ=None
+        self.cid=self.sid=self.dbr=None
+        self._circ=self._d=None
         self.maxcount=self.rights=0
         self.state=self.S_init
         
 
     def _reset(self, delay=0.0):
         self.close()
+        
+        if self.connected:
+            self._conCB(self, False)
 
         reactor.callLater(delay, self._connect)
 
     @property
     def connected(self):
-        return self._circ is not None
-        
+        return self.state is self.S_connect
 
-    @inlineCallbacks
     def _connect(self):
-        
-        self._conCB(self, False)
+        # the following actions happen in the order:
+        # lookup -> getCircuit -> attach -> chanOpen
 
-        while self._ctxt.running:
-            self.state=self.S_lookup
+        def retry(err, delay=0.1):
+            self.reset(delay)
+            return err
 
-            srv=yield self._ctxt.lookup(self.name)
-            if srv is None:
-                continue
+        def chanOpen(conn):
+            if conn is False:
+                # channel rejected by server
+                reactor.callLater(30.0, self._connect)
+                return
 
-            self.state=self.S_waitcirc
+            self.state=self.S_connect
 
-            log.debug('Found %s on %s',self.name,srv)
-            
-            circ=yield self._ctxt.openCircuit(srv)
-            if circ is None:
-                continue
+            self._eventDis=Deferred()
+            self._eventCon.callback(self)
 
+            self._conCB(self, True)
+            return conn
+
+        def attach(circ):
             log.debug('Attaching %s to %s',self.name,circ)
             circ.addchan(self)
             self._circ=circ
 
             self._d=Deferred()
-            conn=yield self._d
-            self._d=None
-            
-            if conn is None:
-                # channel creation failed
-                continue
-            elif conn is False:
-                # channel rejected by server
-                reactor.callLater(30.0, self._connect)
-                return
+            self._d.addCallbacks(chanOpen, retry)
+            return circ
 
-            break
+        def getCircuit(srv):
 
-        self.state=self.S_connect
+            self.state=self.S_waitcirc
 
-        self._eventDis=Deferred()
-        self._eventCon.callback(self)
+            log.debug('Found %s on %s',self.name,srv)
+                
+            d=self._ctxt.openCircuit(srv)
+            d.addCallbacks(attach, retry)
+            return srv
 
-        self._conCB(self, True)
+        self.state=self.S_lookup
+
+        d=self._ctxt.lookup(self.name)
+        d.addCallback(getCircuit)
+        # lookups only fail when the client is shutting down
 
     def _circuitLost(self):
         if self._d:
@@ -121,6 +129,7 @@ class CAClientChannel(object):
         self._reset()
         if self._d:
             self._d.callback(False)
+            self._d=None
 
     def _rights(self, pkt, peer, circuit):
         self.rights=pkt.p2
@@ -132,6 +141,7 @@ class CAClientChannel(object):
             return
         if self._d:
             self._d.callback(True)
+            self._d=None
 
     def dispatch(self, pkt, peer, circuit):
         assert circuit is self._circ
