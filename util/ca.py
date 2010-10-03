@@ -28,17 +28,11 @@ def packCAerror(cid, sts, msg, pkt):
 
 class CAmessage(object):
 
-    def __init__(self, body='', **kwargs):
-        parts = ['cmd','size','dtype','count','p1','p2']
+    def __init__(self, cmd=0, size=0, dtype=0, count=0,
+                       p1=0, p2=0, body=''):
+        self.cmd, self.size, self.dtype = cmd, size, dtype
+        self.count, self.p1, self.p2 = count, p1, p2
         self.body=body
-        for arg, val in kwargs.iteritems():
-            if arg not in parts:
-                raise AttributeError('Invalid keyword '+arg)
-            setattr(self,arg,val)
-        for p in parts:
-            if hasattr(self,p) or p is 'body':
-                continue
-            setattr(self,p,0)
 
     @classmethod
     def unpack(cls, msg):
