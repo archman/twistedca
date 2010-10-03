@@ -24,6 +24,7 @@ class CAClient(object):
         self.resolv=Resolver()
         
         self.circuits=CACircuitFactory(self)
+        self.channels=[]
 
         if host is None:
             from socket import gethostname
@@ -35,14 +36,17 @@ class CAClient(object):
             user=getuser()
         self.user=user
 
+        reactor.addSystemEventTrigger("before", "shutdown", self.close)
+
     def close(self):
         self.running=False
+
+        for c in copy(self.channels):
+            c.close()
 
         self.resolv.close()
 
         self.circuits.close()
-
-        #TODO: Who closes channels?
 
     def lookup(self, name):
         if not self.running:

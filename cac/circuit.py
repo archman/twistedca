@@ -3,6 +3,7 @@
 import socket, logging
 from util.ca import CAmessage, padString
 from util import defs
+from util.idman import IDManager
 from copy import copy
 
 from twisted.internet import reactor
@@ -21,6 +22,7 @@ class CAClientcircuit(Protocol):
         self.in_buffer=''
         
         self._circ={0 :self.caver,
+                    15:self.forwardIOID,
                     18:self.forwardCID,
                     22:self.forwardCID,
                     23:self.ping,
@@ -28,32 +30,15 @@ class CAClientcircuit(Protocol):
                     27:self.forwardCID,
                    }
         
-        self.channels={}
-        self.pendingActions={}
+        self.channels=IDManager()
+        self.subscriptions=IDManager()
+        self.pendingActions=IDManager()
 
-        self.next_cid=0
-        self.next_ioid=0
-
-    def getCID(self):
-        cid=self.next_cid
-        self.next_cid+=1
-        while self.next_cid in self.channels:
-            self.next_cid+=1
-        return cid
-
-    def getIOID(self):
-        ioid=self.next_ioid
-        self.next_ioid+=1
-        while self.next_ioid in self.pendingActions:
-            self.next_ioid+=1
-        return ioid
-        
 
     def addchan(self, channel):
         assert channel not in self.channels
         
-        channel.cid=self.getCID()
-        self.channels[channel.cid]=channel
+        channel.cid=self.channels.add(channel)
 
         name=padString(channel.name)
         msg=CAmessage(cmd=18, size=len(name),
@@ -89,10 +74,17 @@ class CAClientcircuit(Protocol):
 
     def forwardCID(self, pkt, peer, circuit):
         chan=self.channels.get(pkt.p1)
-        if not chan:
-            log.warning('Attempt to access non-existent channel')
+        if chan is None:
+            log.warning('Attempt to access non-existent CID %d',pkt.p1)
             return
         chan.dispatch(pkt, peer, circuit)
+
+    def forwardIOID(self, pkt, peer, circuit):
+        act=self.pendingActions.pop(pkt.p2)
+        if act is None:
+            log.warning('Reply for non-existent action %d',pkt.p2)
+            return
+        act.dispatch(pkt, peer, circuit)
 
     # socket operations
 
@@ -113,11 +105,12 @@ class CAClientcircuit(Protocol):
     def connectionLost(self, reason):
         self.client.dispatchtcp(None, self.peer, self)
         # make a copy of the list (not contents)
-        # because calling c() may cause the size
+        # because calling _circuitLost() may cause the size
         # of closeList to change
-        for c in copy(self.channels.values()):
-            c._circuitLost()
-        self.channels.clear()
+        for m in [self.channels, self.subscriptions, self.pendingActions]:
+            for c in m.itervalues():
+                c._circuitLost()
+            m.clear()
 
         log.debug('Destroy %s',self)
 
@@ -148,11 +141,10 @@ class CACircuitFactory(ClientFactory):
 
     def __init__(self, client):
         self.client=client
-
         self.circuits={}
 
     def close(self):
-        for c in copy(self.circuits):
+        for c in copy(self.circuits.values()):
             c.disconnect()
 
     def requestCircuit(self, srv):

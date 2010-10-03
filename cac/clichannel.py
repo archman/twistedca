@@ -4,7 +4,7 @@ import logging
 log=logging.getLogger('cac.clichannel')
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.defer import Deferred, inlineCallbacks, succeed, fail
 
 from util.defs import DBR_TIME
 from client import CAClient
@@ -19,6 +19,8 @@ class CAClientChannel(object):
                  context=CAClient.default):
         self.name=name
         self._conCB, self._ctxt=connectCB, context
+        self._eventDis=Deferred()
+        self._eventCon=None
 
         self._chan={18:self._channelOk,
                     22:self._rights,
@@ -28,17 +30,25 @@ class CAClientChannel(object):
 
         self._reset()
 
-        reactor.callWhenRunning(self._connect)
+    def close(self):
+        self._eventDis.callback(self)
+        self._eventCon=Deferred()
 
-    def _reset(self):
         self.cid=self.sid=self.dbr=self._d=None
         self._circ=None
         self.maxcount=self.rights=0
         self.state=self.S_init
+        
+
+    def _reset(self, delay=0.0):
+        self.close()
+
+        reactor.callLater(delay, self._connect)
 
     @property
     def connected(self):
         return self._circ is not None
+        
 
     @inlineCallbacks
     def _connect(self):
@@ -79,6 +89,10 @@ class CAClientChannel(object):
             break
 
         self.state=self.S_connect
+
+        self._eventDis=Deferred()
+        self._eventCon.callback(self)
+
         self._conCB(self, True)
 
     def _circuitLost(self):
