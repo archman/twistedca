@@ -8,18 +8,23 @@ from twisted.internet.defer import Deferred
 
 from util.cadata import caMeta, fromstring, dbr_to_dbf
 from util.ca import CAmessage
+from util.defs import *
 
 
 class CAGet(object):
     
-    def __init__(self, channel, dbr, count=None, dbf=None):
-        self._chan, self.dbr, self.count = channel, dbr, count
+    def __init__(self, channel, dbf=None, count=None,
+                 meta=META.PLAIN, dbf_conv=None):
+        self._chan, self.dbf = channel, dbf
+        self._meta, self.count = meta, count
+        self.dbf_conv=dbf_conv
+
         self.ioid=None
 
-        if dbf is None:
-            dbf, _=dbr_to_dbf(self.dbr)
-
-        self.meta=caMeta(dbf)
+        if dbf_conv is None and dbf is not None:
+            self.meta=caMeta(dbf)
+        elif dbf_conv is not None:
+            self.meta=caMeta(dbf_conv)
 
         self.restart()
 
@@ -40,11 +45,16 @@ class CAGet(object):
 
         self.ioid=chan._circ.pendingActions.add(self)
 
+        dbf=self.dbf
+        if dbf is None:
+            dbf,_=dbr_to_dbf(chan.dbr)
+        dbr=dbf_to_dbr(dbf, self._meta)
+
         cnt=self.count
         if cnt is None:
             cnt=chan.maxcount
 
-        msg=CAmessage(cmd=15, dtype=self.dbr, count=cnt,
+        msg=CAmessage(cmd=15, dtype=dbr, count=cnt,
                       p1=chan.sid, p2=self.ioid).pack()
         chan._circ.send(msg)
 
@@ -55,7 +65,7 @@ class CAGet(object):
         if self.done:
             return
 
-        d=channel._eventCon
+        d=self._chan._eventCon
         d.addCallback(self._chanOk)
 
     def dispatch(self, pkt, peer, circuit):
@@ -65,7 +75,12 @@ class CAGet(object):
             chan._circ.pendingActions[self.ioid]=self
             return
 
-        data = fromstring(pkt.body, pkt.dtype, pkt.count, self.meta)
+        meta=self.meta
+        if meta is None:
+            dbf,_=dbr_to_dbf(pkt.dtype)
+            meta=caMeta(dbf)
+
+        data = fromstring(pkt.body, pkt.dtype, pkt.count, meta)
 
         self._result.callback(data)
         self.ioid=None
