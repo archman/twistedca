@@ -6,7 +6,6 @@ log=logging.getLogger('cac.clichannel')
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, succeed, fail
 
-from util.defs import DBR_TIME
 from client import CAClient
 
 class CAClientChannel(object):

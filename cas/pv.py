@@ -58,7 +58,7 @@ class PV(object):
             raise CAError("type conversion failed", ECA_NOCONVERT)
         log.info('set %s to %s',self.name,str(val))
         self.value=val
-        self.post(DBE_VALUE|DBE_LOG)
+        self.post(DBE.VALUE|DBE.LOG)
         return True
 
     def monitor(self, channel, dtype, count, mask):

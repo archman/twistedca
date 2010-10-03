@@ -76,14 +76,14 @@ dbr_char=ValueArray('B')
 dbr_long=ValueArray('i')
 dbr_double=ValueArray('d')
 
-_dbr_value={DBF_STRING:dbr_string,
-            DBF_INT   :dbr_int,
-            DBF_SHORT :dbr_short,
-            DBF_FLOAT :dbr_float,
-            DBF_ENUM  :dbr_enum,
-            DBF_CHAR  :dbr_char,
-            DBF_LONG  :dbr_long,
-            DBF_DOUBLE:dbr_double
+_dbr_value={DBF.STRING:dbr_string,
+            DBF.INT   :dbr_int,
+            DBF.SHORT :dbr_short,
+            DBF.FLOAT :dbr_float,
+            DBF.ENUM  :dbr_enum,
+            DBF.CHAR  :dbr_char,
+            DBF.LONG  :dbr_long,
+            DBF.DOUBLE:dbr_double
            }
 def dbr_value(type):
     """Fetch the (un)packer for the given field type.
@@ -95,14 +95,14 @@ def dbr_value(type):
     """
     return _dbr_value[type]
 
-_dbf_element_size={DBF_STRING:40,
-                   DBF_INT   :2,
-                   DBF_SHORT :2,
-                   DBF_FLOAT :4,
-                   DBF_ENUM  :2,
-                   DBF_CHAR  :1,
-                   DBF_LONG  :4,
-                   DBF_DOUBLE:8
+_dbf_element_size={DBF.STRING:40,
+                   DBF.INT   :2,
+                   DBF.SHORT :2,
+                   DBF.FLOAT :4,
+                   DBF.ENUM  :2,
+                   DBF.CHAR  :1,
+                   DBF.LONG  :4,
+                   DBF.DOUBLE:8
                   }
 def dbf_element_size(dbf):
     return _dbf_element_size[dbf]
@@ -112,8 +112,8 @@ dbr_sts_default=Struct('!hh')
 dbr_sts_char=Struct('!hhx')
 dbr_sts_double=Struct('!hhxxxx')
 
-_dbr_sts={DBF_CHAR:dbr_sts_char,
-          DBF_DOUBLE:dbr_sts_double
+_dbr_sts={DBF.CHAR:dbr_sts_char,
+          DBF.DOUBLE:dbr_sts_double
          }
 def dbr_sts(type):
     """Fetch the status meta-data (un)packer for the given field type.
@@ -130,11 +130,11 @@ dbr_time_default=Struct('!hhII')
 dbr_time_short=Struct('!hhIIxx')
 dbr_time_char=Struct('!hhIIxxx')
 dbr_time_double=Struct('!hhIIxxxx')
-_dbr_time={DBF_INT   :dbr_time_short,
-           DBF_SHORT :dbr_time_short,
-           DBF_ENUM  :dbr_time_short,
-           DBF_CHAR  :dbr_time_char,
-           DBF_DOUBLE:dbr_time_double
+_dbr_time={DBF.INT   :dbr_time_short,
+           DBF.SHORT :dbr_time_short,
+           DBF.ENUM  :dbr_time_short,
+           DBF.CHAR  :dbr_time_char,
+           DBF.DOUBLE:dbr_time_double
            }
 def dbr_time(type):
     """Fetch the time meta-data (un)packer for the given field type.
@@ -150,10 +150,10 @@ def dbr_time(type):
 dbr_gr_int=Struct('!hh8shhhhhh')
 dbr_gr_char=Struct('!hh8sccccccx')
 dbr_gr_long=Struct('!hh8siiiiii')
-_dbr_gr_integer={DBF_INT:dbr_gr_int,
-                 DBF_SHORT:dbr_gr_int,
-                 DBF_CHAR:dbr_gr_char,
-                 DBF_LONG:dbr_gr_long,
+_dbr_gr_integer={DBF.INT:dbr_gr_int,
+                 DBF.SHORT:dbr_gr_int,
+                 DBF.CHAR:dbr_gr_char,
+                 DBF.LONG:dbr_gr_long,
                 }
 def dbr_gr_integer(type):
     """Fetch the GR meta-data (un)packer for the given integer field type.
@@ -169,8 +169,8 @@ def dbr_gr_integer(type):
 # status, severity, precision, units, dU, dL, aU, wU, wL, aL
 dbr_gr_float=Struct('!hhhxx8sffffff')
 dbr_gr_double=Struct('!hhhxx8sdddddd')
-_dbr_gr_real={DBF_FLOAT:dbr_gr_float,
-              DBF_DOUBLE:dbr_gr_double,
+_dbr_gr_real={DBF.FLOAT:dbr_gr_float,
+              DBF.DOUBLE:dbr_gr_double,
              }
 def dbr_gr_real(type):
     """Fetch the GR meta-data (un)packer for the given real field type.
@@ -190,10 +190,10 @@ dbr_gr_enum=Struct('!hhh' + '16c'*26 + 'H')
 dbr_ctrl_int=Struct('!hh8shhhhhhhh')
 dbr_ctrl_char=Struct('!hh8sccccccccx')
 dbr_ctrl_long=Struct('!hh8siiiiiiii')
-_dbr_ctrl_integer={DBF_INT:dbr_ctrl_int,
-                 DBF_SHORT:dbr_ctrl_int,
-                 DBF_CHAR:dbr_ctrl_char,
-                 DBF_LONG:dbr_ctrl_long,
+_dbr_ctrl_integer={DBF.INT:dbr_ctrl_int,
+                 DBF.SHORT:dbr_ctrl_int,
+                 DBF.CHAR:dbr_ctrl_char,
+                 DBF.LONG:dbr_ctrl_long,
                 }
 def dbr_ctrl_integer(type):
     """Fetch the ctrl meta-data (un)packer for the given integer field type.
@@ -210,8 +210,8 @@ def dbr_ctrl_integer(type):
 # status, severity, precision, units, dU, dL, aU, wU, wL, aL, cU, cL
 dbr_ctrl_float=Struct('!hhhxx8sffffffff')
 dbr_ctrl_double=Struct('!hhhxx8sdddddddd')
-_dbr_ctrl_real={DBF_FLOAT:dbr_ctrl_float,
-              DBF_DOUBLE:dbr_ctrl_double,
+_dbr_ctrl_real={DBF.FLOAT:dbr_ctrl_float,
+              DBF.DOUBLE:dbr_ctrl_double,
              }
 def dbr_ctrl_real(type):
     """Fetch the ctrl meta-data (un)packer for the given real field type.
@@ -232,25 +232,25 @@ dbr_ctrl_enum=dbr_gr_enum
 # status, severity, ackt, acks, value
 dbr_stsack_string=Struct('!HHHH40s')
 
-_default={DBF_STRING:'',
-          DBF_INT   :0,
-          DBF_FLOAT :0.0,
-          DBF_ENUM  :0,
-          DBF_CHAR  :0,
-          DBF_LONG  :0,
-          DBF_DOUBLE:0.0,
+_default={DBF.STRING:'',
+          DBF.INT   :0,
+          DBF.FLOAT :0.0,
+          DBF.ENUM  :0,
+          DBF.CHAR  :0,
+          DBF.LONG  :0,
+          DBF.DOUBLE:0.0,
          }
 
 def dbf_default(dbf):
     return _default[dbf]
 
-_limits={DBF_STRING:(None,None),
-          DBF_INT   :((-2**16)-1,2**16),
-          DBF_FLOAT :(-1e38,1e38),
-          DBF_ENUM  :((-2**16)-1,2**16),
-          DBF_CHAR  :((-2**8)-1,2**8),
-          DBF_LONG  :((-2**31)-1,2**31),
-          DBF_DOUBLE:(-1e308,1e308),
+_limits={DBF.STRING:(None,None),
+          DBF.INT   :((-2**16)-1,2**16),
+          DBF.FLOAT :(-1e38,1e38),
+          DBF.ENUM  :((-2**16)-1,2**16),
+          DBF.CHAR  :((-2**8)-1,2**8),
+          DBF.LONG  :((-2**31)-1,2**31),
+          DBF.DOUBLE:(-1e308,1e308),
          }
 
 def dbf_default_limits(dbf):
@@ -326,12 +326,12 @@ def tostring(value, meta, dbr, count):
                          strs=meta.strs)
 
     metadata=''
-    if metacls==DBR_PLAIN:
+    if metacls==META.PLAIN:
         pass
-    elif metacls==DBR_STS:
+    elif metacls==META.STS:
         metadata=dbr_sts(meta.dbf).pack(meta.status, meta.severity)
         
-    elif metacls==DBR_TIME:
+    elif metacls==META.TIME:
         s=int(meta.stamp)-POSIX_TIME_AT_EPICS_EPOCH
         ns=int((meta.stamp%1)*1e9)
         metadata=dbr_time(meta.dbf).pack(meta.status, meta.severity,
@@ -352,15 +352,15 @@ def fromstring(raw, dbr, count, meta):
     mconv = dbr_convert_meta_value(dbf, meta.dbf)
     fields=['display', 'warning', 'alarm', 'control']
 
-    if metacls==DBR_PLAIN:
+    if metacls==META.PLAIN:
         pass
 
-    elif metacls==DBR_STS:
+    elif metacls==META.STS:
         conv=dbr_sts(dbf)
         rmeta.status, rmeta.severity = conv.unpack(raw[:conv.size])
         raw=raw[conv.size:]
 
-    elif metacls==DBR_TIME:
+    elif metacls==META.TIME:
         conv=dbr_sts(dbf)
         rmeta.status, rmeta.severity, sec, nsec = conv.unpack(raw[:conv.size])
         rmeta.stamp=sec+POSIX_TIME_AT_EPICS_EPOCH+float(nsec)*1e-9
@@ -369,7 +369,7 @@ def fromstring(raw, dbr, count, meta):
     else:
         raise RuntimeError('meta data format not supported')
 
-    if dbf!=DBF_STRING:
+    if dbf!=DBF.STRING:
         # remove zero padding
         dlen=dbf_element_size(dbf)*count
         raw=raw[:dlen]

@@ -29,12 +29,12 @@ def main():
     for pv in sys.argv[1:]:
         chan=CAClientChannel(pv, channelCB)
 
-        for dbr, count, dbf in [(DBR_STRING, 1  , None),
-                                (DBR_INT   , None, DBF_STRING),
-                                (DBR_INT   , None, None),
-                                (DBR_INT   , None, DBF_DOUBLE),
-                                (DBF_DOUBLE   , None, DBR_INT),
-                                (DBF_DOUBLE   , None, None),
+        for dbr, count, dbf in [(DBR.STRING, 1  , None),
+                                (DBR.INT   , None, DBF.STRING),
+                                (DBR.INT   , None, None),
+                                (DBR.INT   , None, DBF.DOUBLE),
+                                (DBF.DOUBLE   , None, DBR.INT),
+                                (DBF.DOUBLE   , None, None),
                                ]:
             gets.append(CAGet(chan, dbr, count, dbf).data)
 
