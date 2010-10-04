@@ -141,7 +141,7 @@ _dbr_meta={
     DBR.GR_FLOAT   :(Struct('!hhhxx8sffffff'), META.GR|METAPARTS.REAL),
     DBR.GR_DOUBLE  :(Struct('!hhhxx8sdddddd'), META.GR|METAPARTS.REAL),
     # status, severity, #strings, 26x enum strings
-    DBR.GR_ENUM    :(Struct('!hhh' + '16c'*26), META.STS|METAPARTS.ENUM),
+    DBR.GR_ENUM    :(Struct('!hhh' + '26s'*16), META.STS|METAPARTS.ENUM),
     # status, severity, units, dU, dL, aU, wU, wL, aL, cU, cL
     DBR.CTRL_SHORT :(Struct('!hh8shhhhhhhh'), META.CTRL),
     DBR.CTRL_CHAR  :(Struct('!hh8sccccccccx'), META.CTRL),
@@ -321,13 +321,11 @@ def tostring(value, meta, dbr, count):
         mlist.append(meta.precision)
 
     if mmask&METAPARTS.ENUM:
-        if len(meta.strs)>26:
-            raise ValueError("Too many enum strings to encode")
-
-        mlist.append(len(meta.strs))
-        mlist+=meta.strs
-        if len(meta.strs)<26:
-            mlist+=['']*(26-len(meta.strs))
+        N=len(meta.strs[:16])
+        mlist.append(N)
+        mlist+=meta.strs[:16]
+        if N:
+            mlist+=['']*(16-N)
 
     if mmask&METAPARTS.GR:
         mlist.append(meta.units)
@@ -374,9 +372,10 @@ def fromstring(raw, dbr, count, meta):
         rmeta.precision=rawmeta.pop(0)
 
     if mmask&METAPARTS.ENUM:
-        nstrs=min(26, rawmeta.pop(0))
-        assert len(rawmeta)==26
-        rmeta.strs=rawmeta[:nstrs]
+        nstrs=min(16, rawmeta.pop(0))
+        assert len(rawmeta)==16
+        rmeta.strs=[s.rstrip('\0') for s in rawmeta[:nstrs]]
+            
         rawmeta=[]
 
     if mmask&METAPARTS.GR:
