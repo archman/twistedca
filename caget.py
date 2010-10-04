@@ -22,7 +22,7 @@ p.add_option('-v', '--verbose', default=0,
 p.add_option('-q', '--quiet', default=0,
              help='Make less noise', action='count')
 
-p.add_option('-w', '--tmo', type="float",
+p.add_option('-w', '--tmo', type="float", default=5.0,
              help='Get Timeout')
 
 p.add_option('-a', '--time', action="store_true",
@@ -84,7 +84,7 @@ log.info('Requesting %s %s (%s) as %s',
          dbf_req, meta_req, count, dbf_dis)
 
 def channelCB(chan, status):
-    pass
+    log.info(chan)
 
 def data(data, pv, cls):
     value,meta=data
@@ -95,8 +95,12 @@ def data(data, pv, cls):
     return data
 
 def stop(x):
+    log.fatal('Timeout!')
     reactor.stop()
     return x
+
+if opt.tmo >=0.00001:
+    reactor.callLater(opt.tmo, stop, None)
 
 gets=[]
 
