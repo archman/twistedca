@@ -10,6 +10,8 @@ class EnumItem(int):
     _enum_name="<Unknown>"
     def __str__(self):
         return '%s(%d)'%(self._enum_name,self)
+    def __repr__(self):
+        return str(self)
 
 class Enum(object):
     """

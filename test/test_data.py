@@ -220,11 +220,11 @@ class TestFromStringString(unittest.TestCase):
         self._check_value(val, rmeta)
 
     def test_string_sts(self):
-        val, rmeta=cadata.fromstring('\x12\x34\x10\x20hello world'+('\0'*9),
+        val, rmeta=cadata.fromstring('\x00\x10\x00\x03hello world'+('\0'*9),
                                    defs.DBR.STS_STRING, 1, self.meta)
         self.assertEqual(self.meta, self.bmeta)
-        self.assertEqual(rmeta.status, 0x1234)
-        self.assertEqual(rmeta.severity, 0x1020)
+        self.assertEqual(rmeta.status, defs.STATUS.BAD_SUB)
+        self.assertEqual(rmeta.severity, defs.SEVERITY.INVALID)
         self._check_value(val, rmeta)
 
     def test_string_char(self):
