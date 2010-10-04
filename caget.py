@@ -95,12 +95,15 @@ def data(data, pv, cls):
     return data
 
 def stop(x):
-    log.fatal('Timeout!')
     reactor.stop()
     return x
 
+def timeout():
+    log.fatal('Timeout!')
+    reactor.stop()
+
 if opt.tmo >=0.00001:
-    reactor.callLater(opt.tmo, stop, None)
+    reactor.callLater(opt.tmo, timeout)
 
 gets=[]
 
