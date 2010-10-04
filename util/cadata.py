@@ -269,7 +269,11 @@ def printMeta(meta, cls):
 
     if mmask&METAPARTS.TIME:
         from time import ctime
-        m+='\nTime: %s\n'%ctime(meta.stamp)
+        try:
+            ts=ctime(meta.stamp)
+        except ValueError:
+            ts='Invalid(%.2f)'%meta.stamp
+        m+='\nTime: %s\n'%ts
         return m
 
     if mmask&METAPARTS.REAL:
