@@ -5,6 +5,7 @@ from util.enum import Enum
 __all__=['SERVER_PORT','CLIENT_PORT','CA_VERSION',
          'POSIX_TIME_AT_EPICS_EPOCH',
          'DBE','META','DBF','DBR',
+         'SEVERITY','STATUS',
          'dbf_elem_size',
          'dbr_to_dbf',
          'dbf_to_dbr']
@@ -150,3 +151,13 @@ for k,v in _DBR2DBF.iteritems():
     _DBF2DBR[v]=k
 def dbf_to_dbr(dbf, meta):
     return _DBF2DBR[(dbf, meta)]
+
+SEVERITY=Enum('', NO_ALARM=0, MINOR=1, MAJOR=2, INVALID=3)
+
+STATUS=Enum('', NONE=0, READ=1, WRITE=2,
+                HIHI=3, HIGH=4, LOLO=5, LOW=6,
+                STATE=7, COS=8, COMM=9, TIMEOUT=10,
+                HW_LIMIT=11, CALC=12, SCAN=13, LINK=14,
+                SOFT=15, BAD_SUB=16, UDF=17, DISABLE=18,
+                SIMM=19, READ_ACCESS=20, WRITE_ACCESS=21
+            )

@@ -125,7 +125,7 @@ def dbr_sts(type):
     """
     return _dbr_sts.get(type, dbr_sts_default)
 
-# status, severity, ts_sec, ts_nsec, value
+# status, severity, ts_sec, ts_nsec
 dbr_time_default=Struct('!hhII')
 dbr_time_short=Struct('!hhIIxx')
 dbr_time_char=Struct('!hhIIxxx')
@@ -315,6 +315,36 @@ class caMeta(object):
                 return False
         return True
 
+def printMeta(meta, cls):
+    if cls is META.PLAIN:
+        return '\n'
+    
+    m='\nSev: %s Sts: %s'%(meta.severity, meta.status)
+
+    if cls is META.STS:
+        return m
+
+    elif cls is META.TIME:
+        from time import ctime
+        m+='\nTime: %s\n'%ctime(meta.stamp)
+        return m
+
+    if meta.dbf in (DBF.FLOAT, DBF.DOUBLE):
+        m+='\nPrecision: %s'%meta.precision
+
+    if meta.dbf is DBF.ENUM:
+        m+='\nStrings: '+str(meta.strs)
+    else:
+        m+='\nUnits: '+meta.units
+
+    m+="\nDisplay: %s\nWarning: %s\nError: %s"% \
+        (meta.display, meta.warning, meta.alarm)
+
+    if cls is META.CTRL:
+        m+="\nControl: %s"%meta.control
+
+    return m+'\n'
+
 
 def tostring(value, meta, dbr, count):
     dbf, metacls = dbr_to_dbf(dbr)
@@ -368,6 +398,10 @@ def fromstring(raw, dbr, count, meta):
 
     else:
         raise RuntimeError('meta data format not supported')
+
+    if metacls is not META.PLAIN:
+        rmeta.severity=SEVERITY.fromInt(rmeta.severity)
+        rmeta.status=STATUS.fromInt(rmeta.status)
 
     if dbf!=DBF.STRING:
         # remove zero padding

@@ -9,6 +9,7 @@ from twisted.internet.defer import DeferredList
 from cac.clichannel import CAClientChannel
 from cac.get import CAGet
 from util.defs import *
+from util.cadata import printMeta
 
 from optparse import OptionParser
 
@@ -85,12 +86,12 @@ log.info('Requesting %s %s (%s) as %s',
 def channelCB(chan, status):
     pass
 
-def data(data, pv):
+def data(data, pv, cls):
     value,meta=data
     print pv,
     for v in value:
         print v,
-    print
+    print printMeta(meta,cls),
     return data
 
 def stop(x):
@@ -104,7 +105,7 @@ for pv in pvs:
 
     g=CAGet(chan, dbf_req, count, meta=meta_req,
             dbf_conv=dbf_dis)
-    g.data.addCallback(data, pv)
+    g.data.addCallback(data, pv, meta_req)
     gets.append(g.data)
 
 done=DeferredList(gets)
