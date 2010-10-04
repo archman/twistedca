@@ -31,41 +31,55 @@ class CAClientChannel(object):
         self._reset()
 
     def close(self):
+        if self._eventDis is None:
+            # shutdown already happened
+            return
+
         if self._d:
             self._d.errback()
-
-        self._eventDis.callback(self)
-        self._eventCon=Deferred()
 
         self.cid=self.sid=self.dbr=None
         self._circ=self._d=None
         self.maxcount=self.rights=0
         self.state=self.S_init
+
+        self._eventDis.callback(self)
+        self._eventCon=Deferred()
+
+        if not self._ctxt.running:
+            self._eventDis=None
         
 
     def _reset(self, delay=0.0):
+        log.debug('Channel %s reset',self.name)
         self.close()
         
         if self.connected:
             self._conCB(self, False)
 
-        reactor.callLater(delay, self._connect)
+        if self._ctxt.running:
+            reactor.callLater(delay, self._connect)
 
     @property
     def connected(self):
         return self.state is self.S_connect
 
     def _connect(self):
+        log.debug('Channel %s connecting...',self.name)
         # the following actions happen in the order:
         # lookup -> getCircuit -> attach -> chanOpen
 
         def retry(err, delay=0.1):
-            self.reset(delay)
+            self._reset(delay)
             return err
 
         def chanOpen(conn):
+            log.debug('Channel %s Open',self.name)
+            #if self._eventDis is None:
+                #return
+
             if conn is False:
-                # channel rejected by server
+                log.info('channel %s rejected by server', self.name)
                 reactor.callLater(30.0, self._connect)
                 return
 
@@ -75,7 +89,6 @@ class CAClientChannel(object):
             self._eventCon.callback(self)
 
             self._conCB(self, True)
-            return conn
 
         def attach(circ):
             log.debug('Attaching %s to %s',self.name,circ)
@@ -103,15 +116,12 @@ class CAClientChannel(object):
         # lookups only fail when the client is shutting down
 
     def _circuitLost(self):
+        log.debug('Channel %s lost circuit',self.name)
         if self._d:
             self._d.errback()
+            self._d=None
         
         self._reset()
-
-        if not self._ctxt.running:
-            return
-
-        reactor.callLater(0.1, self._connect)
 
     def _disconn(self, pkt, peer, circuit):
         log.warning('Server has disconnected %s',self.name)
