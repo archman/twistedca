@@ -50,7 +50,7 @@ logging.basicConfig(format='%(message)s',level=LVL[verb])
 
 dbf_req=None
 meta_req=META.PLAIN
-dbf_dis=DBF.STRING
+dbf_dis=None
 count=opt.count
 
 if opt.char and opt.str:
