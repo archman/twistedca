@@ -25,6 +25,8 @@ class CAGet(object):
             self.meta=caMeta(dbf)
         elif dbf_conv is not None:
             self.meta=caMeta(dbf_conv)
+        else:
+            self.meta=None
 
         self.restart()
 

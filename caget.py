@@ -74,7 +74,7 @@ if opt.dbr is not None:
     dbf_req, meta_req=dbr_to_dbf(dbr)
 
 if opt.str:
-    dbr_req=DBF.STRING
+    dbf_req=DBF.STRING
 
 if opt.time:
     meta_req=META.TIME
