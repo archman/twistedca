@@ -183,8 +183,8 @@ def dbr_gr_real(type):
     """
     return _dbr_gr_real[type]
 
-# status, severity, #strings, 26x enum strings, value
-dbr_gr_enum=Struct('!hhh' + '16c'*26 + 'H')
+# status, severity, #strings, 26x enum strings
+dbr_gr_enum=Struct('!hhh' + '16c'*26)
 
 # status, severity, units, dU, dL, aU, wU, wL, aL, cU, cL
 dbr_ctrl_int=Struct('!hh8shhhhhhhh')
@@ -380,22 +380,50 @@ def fromstring(raw, dbr, count, meta):
 
     vconv = dbr_convert_value(dbf, meta.dbf)
     mconv = dbr_convert_meta_value(dbf, meta.dbf)
-    fields=['display', 'warning', 'alarm', 'control']
+    fields=[]
 
-    if metacls==META.PLAIN:
+    if metacls is META.PLAIN:
         pass
 
-    elif metacls==META.STS:
+    elif metacls is META.STS:
         conv=dbr_sts(dbf)
         rmeta.status, rmeta.severity = conv.unpack(raw[:conv.size])
         raw=raw[conv.size:]
 
-    elif metacls==META.TIME:
+    elif metacls is META.TIME:
         conv=dbr_time(dbf)
         rmeta.status, rmeta.severity, sec, nsec = conv.unpack(raw[:conv.size])
         rmeta.stamp=sec+POSIX_TIME_AT_EPICS_EPOCH+float(nsec)*1e-9
         raw=raw[conv.size:]
 
+    elif metacls is META.GR:
+        if dbf is DBF.ENUM:
+            conv=dbr_gr_enum
+            m = conv.unpack(raw[:dbr_gr_enum.size])
+            rmeta.status, rmeta.severity = m[:2]
+            nstrs = m[2]
+            rmeta.strs = m[3:(29)]
+            if nstrs<=26:
+                rmeta.strs=rmeta.strs[:nstrs]
+
+        elif dbf in (DBF.FLOAT, DBF.DOUBLE):
+            conv = dbr_gr_real(dbf)
+            rmeta.status, rmeta.severity, rmeta.precision, rmeta.units, \
+            dU, dL, aU, wU, wL, aL = conv.unpack(raw[:conv.size])
+            rmeta.display=(dL,dU)
+            rmeta.warning, rmeta.alarm=(wL,wU), (aL,aU)
+            fields=['display', 'warning', 'alarm']
+
+        else:
+            conv = dbr_gr_integer(dbf)
+            rmeta.status, rmeta.severity, rmets.units, \
+            dU, dL, aU, wU, wL, aL = conv.unpack(raw[:conv.size])
+            rmeta.display=(dL,dU)
+            rmeta.warning, rmeta.alarm=(wL,wU), (aL,aU)
+            fields=['display', 'warning', 'alarm']
+
+        raw=raw[conv.size:]
+            
     else:
         raise RuntimeError('meta data format not supported')
 
@@ -414,6 +442,7 @@ def fromstring(raw, dbr, count, meta):
                          strs=rmeta.strs)
     for f in fields:
         a, b = getattr(rmeta, f)
-        setattr(rmeta, f, (mconv(a), mconv(b)))
+        setattr(rmeta, f, (mconv(a, prec=rmeta.precision),
+                           mconv(b, prec=rmeta.precision)))
 
     return (value, rmeta)

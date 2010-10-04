@@ -28,6 +28,9 @@ def intprint(val, **kwargs):
     # use normal list printing and strip off the brackets
     return [str(list(val))[1:-1]]
 
+def intprintmeta(val, **kwargs):
+    return str(val)
+
 def floatprint(val, prec=None, **kwargs):
     if prec is None:
         spec='%g'
@@ -43,6 +46,13 @@ def floatprint(val, prec=None, **kwargs):
         val=[val]
 
     return [reduce(_helper, val, '')]
+
+def floatprintmeta(val, prec=None, **kwargs):
+    if prec is None:
+        spec='%g'
+    else:
+        spec="%%.%dg"%prec
+    return spec%val
 
 def printEnum(val, strs=[], **kwargs):
     if val>=len(strs) or val<0:
@@ -135,25 +145,25 @@ _converter_meta={
             (DBF.STRING,DBF.CHAR)  :store_zero,
             (DBF.STRING,DBF.LONG)  :store_zero,
             (DBF.STRING,DBF.DOUBLE):store_zero,
-            (DBF.INT,DBF.STRING)   :store_none,
+            (DBF.INT,DBF.STRING)   :intprintmeta,
             (DBF.INT,DBF.FLOAT)    :floatconv,
             (DBF.INT,DBF.CHAR)     :intprint,
             (DBF.INT,DBF.DOUBLE)   :floatconv,
-            (DBF.FLOAT,DBF.STRING) :store_none,
+            (DBF.FLOAT,DBF.STRING) :floatprintmeta,
             (DBF.FLOAT,DBF.INT)    :intconv,
             (DBF.FLOAT,DBF.ENUM)   :intconv,
             (DBF.FLOAT,DBF.CHAR)   :intprint,
             (DBF.FLOAT,DBF.LONG)   :intconv,
-            (DBF.ENUM,DBF.STRING)  :store_none,
+            (DBF.ENUM,DBF.STRING)  :intprintmeta,
             (DBF.ENUM,DBF.FLOAT)   :floatconv,
             (DBF.ENUM,DBF.DOUBLE)  :floatconv,
-            (DBF.CHAR,DBF.STRING)  :store_none,
+            (DBF.CHAR,DBF.STRING)  :intprintmeta,
             (DBF.CHAR,DBF.FLOAT)   :floatconv,
             (DBF.CHAR,DBF.DOUBLE)  :floatconv,
-            (DBF.LONG,DBF.STRING)  :store_none,
+            (DBF.LONG,DBF.STRING)  :intprintmeta,
             (DBF.LONG,DBF.FLOAT)   :floatconv,
             (DBF.LONG,DBF.DOUBLE)  :floatconv,
-            (DBF.DOUBLE,DBF.STRING):store_none,
+            (DBF.DOUBLE,DBF.STRING):floatprintmeta,
             (DBF.DOUBLE,DBF.INT  ) :intconv,
             (DBF.DOUBLE,DBF.ENUM)  :floatconv,
             (DBF.DOUBLE,DBF.CHAR)  :intconv,
