@@ -107,130 +107,69 @@ _dbf_element_size={DBF.STRING:40,
 def dbf_element_size(dbf):
     return _dbf_element_size[dbf]
 
-# status, severity
-dbr_sts_default=Struct('!hh')
-dbr_sts_char=Struct('!hhx')
-dbr_sts_double=Struct('!hhxxxx')
-
-_dbr_sts={DBF.CHAR:dbr_sts_char,
-          DBF.DOUBLE:dbr_sts_double
-         }
-def dbr_sts(type):
-    """Fetch the status meta-data (un)packer for the given field type.
-    
-    The converter pack/unpack functions take two arguments
-    which are integers (status, and severity).
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
+_dbr_meta={
+    # no meta
+    DBR.STRING     :(Struct(''), META.PLAIN),
+    DBR.INT        :(Struct(''), META.PLAIN),
+    DBR.SHORT      :(Struct(''), META.PLAIN),
+    DBR.FLOAT      :(Struct(''), META.PLAIN),
+    DBR.ENUM       :(Struct(''), META.PLAIN),
+    DBR.CHAR       :(Struct(''), META.PLAIN),
+    DBR.LONG       :(Struct(''), META.PLAIN),
+    DBR.DOUBLE     :(Struct(''),    META.PLAIN),
+    # status, severity
+    DBR.STS_STRING :(Struct('!hh'), META.STS),
+    DBR.STS_SHORT  :(Struct('!hh'), META.STS),
+    DBR.STS_FLOAT  :(Struct('!hh'), META.STS),
+    DBR.STS_ENUM   :(Struct('!hh'), META.STS),
+    DBR.STS_CHAR   :(Struct('!hhx'), META.STS),
+    DBR.STS_LONG   :(Struct('!hh'),  META.STS),
+    DBR.STS_DOUBLE :(Struct('!hhxxxx'), META.STS),
+    # status, severity, ts_sec, ts_nsec
+    DBR.TIME_STRING:(Struct('!hhII'),   META.TIME),
+    DBR.TIME_INT   :(Struct('!hhIIxx'), META.TIME),
+    DBR.TIME_FLOAT :(Struct('!hhII'),   META.TIME),
+    DBR.TIME_ENUM  :(Struct('!hhII'),   META.TIME),
+    DBR.TIME_CHAR  :(Struct('!hhIIxxx'),META.TIME),
+    DBR.TIME_LONG  :(Struct('!hhII'),   META.TIME),
+    DBR.TIME_DOUBLE:(Struct('!hhIIxxxx'),META.TIME),
+    # status, severity, units, dU, dL, aU, wU, wL, aL
+    DBR.GR_SHORT   :(Struct('!hh8shhhhhh'), META.GR),
+    DBR.GR_CHAR    :(Struct('!hh8sccccccx'), META.GR),
+    DBR.GR_LONG    :(Struct('!hh8siiiiii'), META.GR),
+    # status, severity, precision, units, dU, dL, aU, wU, wL, aL
+    DBR.GR_FLOAT   :(Struct('!hhhxx8sffffff'), META.GR|METAPARTS.REAL),
+    DBR.GR_DOUBLE  :(Struct('!hhhxx8sdddddd'), META.GR|METAPARTS.REAL),
+    # status, severity, #strings, 26x enum strings
+    DBR.GR_ENUM    :(Struct('!hhh' + '16c'*26), META.STS|METAPARTS.ENUM),
+    # status, severity, units, dU, dL, aU, wU, wL, aL, cU, cL
+    DBR.CTRL_SHORT :(Struct('!hh8shhhhhhhh'), META.CTRL),
+    DBR.CTRL_CHAR  :(Struct('!hh8sccccccccx'), META.CTRL),
+    DBR.CTRL_LONG  :(Struct('!hh8siiiiiiii'), META.CTRL),
+    DBR.CTRL_FLOAT :(Struct('!hhhxx8sffffffff'), META.CTRL|METAPARTS.REAL),
+    DBR.CTRL_DOUBLE:(Struct('!hhhxx8sdddddddd'), META.CTRL|METAPARTS.REAL),
+    DBR.STSACK_STRING:(Struct('!HHHH40s'), METAPARTS.SPEC),
+   }
+# duplicates
+for dup, src in [(DBR.STS_INT,     DBR.STS_SHORT),
+                 (DBR.TIME_INT,    DBR.TIME_SHORT),
+                 (DBR.GR_INT,      DBR.GR_SHORT),
+                 (DBR.CTRL_INT,    DBR.CTRL_SHORT),
+                 (DBR.GR_STRING,   DBR.STS_STRING),
+                 (DBR.CTRL_STRING, DBR.STS_STRING),
+                 (DBR.CTRL_ENUM,   DBR.GR_ENUM),
+                 (DBR.PUT_ACKT,    DBR.SHORT),
+                 (DBR.PUT_ACKS,    DBR.SHORT),
+                 (DBR.CLASS_NAME,  DBR.STRING),
+                ]:
+    _dbr_meta[dup]=_dbr_meta[src]
+def dbr_meta(dbr):
     """
-    return _dbr_sts.get(type, dbr_sts_default)
-
-# status, severity, ts_sec, ts_nsec
-dbr_time_default=Struct('!hhII')
-dbr_time_short=Struct('!hhIIxx')
-dbr_time_char=Struct('!hhIIxxx')
-dbr_time_double=Struct('!hhIIxxxx')
-_dbr_time={DBF.INT   :dbr_time_short,
-           DBF.SHORT :dbr_time_short,
-           DBF.ENUM  :dbr_time_short,
-           DBF.CHAR  :dbr_time_char,
-           DBF.DOUBLE:dbr_time_double
-           }
-def dbr_time(type):
-    """Fetch the time meta-data (un)packer for the given field type.
+    Return the meta-data converter for the given dbr type
     
-    The converter pack/unpack functions take four arguments
-    which are integers (status, severity, seconds, and nanoseconds).
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
+    Returns: (converter obj, meta-parts bitmask)
     """
-    return _dbr_time.get(type, dbr_time_default)
-
-# status, severity, units, dU, dL, aU, wU, wL, aL
-dbr_gr_int=Struct('!hh8shhhhhh')
-dbr_gr_char=Struct('!hh8sccccccx')
-dbr_gr_long=Struct('!hh8siiiiii')
-_dbr_gr_integer={DBF.INT:dbr_gr_int,
-                 DBF.SHORT:dbr_gr_int,
-                 DBF.CHAR:dbr_gr_char,
-                 DBF.LONG:dbr_gr_long,
-                }
-def dbr_gr_integer(type):
-    """Fetch the GR meta-data (un)packer for the given integer field type.
-    
-    The converter pack/unpack functions take nine arguments:
-    status, severity, units (a string), display high, display low,
-    alarm high, warning high, warning low, alarm low.
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
-    """
-    return _dbr_gr_integer[type]
-
-# status, severity, precision, units, dU, dL, aU, wU, wL, aL
-dbr_gr_float=Struct('!hhhxx8sffffff')
-dbr_gr_double=Struct('!hhhxx8sdddddd')
-_dbr_gr_real={DBF.FLOAT:dbr_gr_float,
-              DBF.DOUBLE:dbr_gr_double,
-             }
-def dbr_gr_real(type):
-    """Fetch the GR meta-data (un)packer for the given real field type.
-    
-    The converter pack/unpack functions take ten arguments:
-    status, severity, precision, units (a string), display high, display low,
-    alarm high, warning high, warning low, alarm low.
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
-    """
-    return _dbr_gr_real[type]
-
-# status, severity, #strings, 26x enum strings
-dbr_gr_enum=Struct('!hhh' + '16c'*26)
-
-# status, severity, units, dU, dL, aU, wU, wL, aL, cU, cL
-dbr_ctrl_int=Struct('!hh8shhhhhhhh')
-dbr_ctrl_char=Struct('!hh8sccccccccx')
-dbr_ctrl_long=Struct('!hh8siiiiiiii')
-_dbr_ctrl_integer={DBF.INT:dbr_ctrl_int,
-                 DBF.SHORT:dbr_ctrl_int,
-                 DBF.CHAR:dbr_ctrl_char,
-                 DBF.LONG:dbr_ctrl_long,
-                }
-def dbr_ctrl_integer(type):
-    """Fetch the ctrl meta-data (un)packer for the given integer field type.
-    
-    The converter pack/unpack functions take eleven arguments:
-    status, severity, units (a string), display high, display low,
-    alarm high, warning high, warning low, alarm low, control high,
-    and control low.
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
-    """
-    return _dbr_gr_integer[type]
-
-# status, severity, precision, units, dU, dL, aU, wU, wL, aL, cU, cL
-dbr_ctrl_float=Struct('!hhhxx8sffffffff')
-dbr_ctrl_double=Struct('!hhhxx8sdddddddd')
-_dbr_ctrl_real={DBF.FLOAT:dbr_ctrl_float,
-              DBF.DOUBLE:dbr_ctrl_double,
-             }
-def dbr_ctrl_real(type):
-    """Fetch the ctrl meta-data (un)packer for the given real field type.
-    
-    The converter pack/unpack functions take twelve arguments:
-    status, severity, precision, units (a string), display high, display low,
-    alarm high, warning high, warning low, alarm low, control high,
-    and control low.
-    :param type: a DBF type
-    :rtype: In instance of :class:`Struct`
-    """
-    return _dbr_gr_real[type]
-
-dbr_ctrl_enum=dbr_gr_enum
-
-# Special
-
-# status, severity, ackt, acks, value
-dbr_stsack_string=Struct('!HHHH40s')
+    return _dbr_meta[dbr]
 
 _default={DBF.STRING:'',
           DBF.INT   :0,
@@ -316,32 +255,37 @@ class caMeta(object):
         return True
 
 def printMeta(meta, cls):
-    if cls is META.PLAIN:
+    dbr=dbf_to_dbr(meta.dbf, cls)
+
+    # Use the meta de/encoder mask
+    _, mmask=dbr_meta(dbr)
+
+    if mmask==0:
         return '\n'
+    m=''
     
-    m='\nSev: %s Sts: %s'%(meta.severity, meta.status)
+    if mmask&METAPARTS.STS:
+        m='\nSev: %s Sts: %s'%(meta.severity, meta.status)
 
-    if cls is META.STS:
-        return m
-
-    elif cls is META.TIME:
+    if mmask&METAPARTS.TIME:
         from time import ctime
         m+='\nTime: %s\n'%ctime(meta.stamp)
         return m
 
-    if meta.dbf in (DBF.FLOAT, DBF.DOUBLE):
+    if mmask&METAPARTS.REAL:
         m+='\nPrecision: %s'%meta.precision
 
-    if meta.dbf is DBF.ENUM:
+    if mmask&METAPARTS.ENUM:
         m+='\nStrings: '+str(meta.strs)
-    else:
+
+
+    if mmask&METAPARTS.GR:
         m+='\nUnits: '+meta.units
+        m+="\nDisplay: %s\nWarning: %s\nError: %s"% \
+            (meta.display, meta.warning, meta.alarm)
 
-    m+="\nDisplay: %s\nWarning: %s\nError: %s"% \
-        (meta.display, meta.warning, meta.alarm)
-
-    if cls is META.CTRL:
-        m+="\nControl: %s"%meta.control
+    if mmask&METAPARTS.CTRL:
+        m+="\nControl: %s"%(meta.control,)
 
     return m+'\n'
 
@@ -349,26 +293,51 @@ def printMeta(meta, cls):
 def tostring(value, meta, dbr, count):
     dbf, metacls = dbr_to_dbf(dbr)
 
+    # value converters
     vconv = dbr_convert_value(meta.dbf, dbf)
     mconv = dbr_convert_meta_value(meta.dbf, dbf)
+
+    # meta encoder
+    mencode, mmask=dbr_meta(dbr)
 
     value = vconv(value, prec=meta.precision,
                          strs=meta.strs)
 
-    metadata=''
-    if metacls==META.PLAIN:
-        pass
-    elif metacls==META.STS:
-        metadata=dbr_sts(meta.dbf).pack(meta.status, meta.severity)
-        
-    elif metacls==META.TIME:
+    mlist=[]
+
+    if mmask&METAPARTS.STS:
+        mlist=[meta.status, meta.severity]
+
+    if mmask&METAPARTS.TIME:
         s=int(meta.stamp)-POSIX_TIME_AT_EPICS_EPOCH
         ns=int((meta.stamp%1)*1e9)
-        metadata=dbr_time(meta.dbf).pack(meta.status, meta.severity,
-                                int(meta.stamp), ns)
+        mlist+=[s,ns]
+    
+    if mmask&METAPARTS.REAL:
+        mlist.append(meta.precision)
 
-    else:
-        raise RuntimeError('meta data format not supported')
+    if mmask&METAPARTS.ENUM:
+        if len(meta.strs)>26:
+            raise ValueError("Too many enum strings to encode")
+
+        mlist.append(len(meta.strs))
+        mlist+=meta.strs
+        if len(meta.strs)<26:
+            mlist+=['']*(26-len(meta.strs))
+
+    if mmask&METAPARTS.GR:
+        mlist.append(meta.units)
+        # dU, dL, aU, wU, wL, aL
+        mlist+=[meta.display[1], meta.display[0],
+                meta.alarm[1],   meta.warning[1],
+                meta.warning[0], meta.alarm[0],
+               ]
+        
+    if mmask&METAPARTS.CTRL:
+        # cU, cL
+        mlist+=[meta.control[1], meta.control[0]]
+
+    metadata=mencode.pack(*mlist)
 
     data=dbr_value(dbf).pack(value[:count])
 
@@ -378,61 +347,53 @@ def fromstring(raw, dbr, count, meta):
     dbf, metacls = dbr_to_dbf(dbr)
     rmeta=copy(meta)
 
+    # value converters
     vconv = dbr_convert_value(dbf, meta.dbf)
     mconv = dbr_convert_meta_value(dbf, meta.dbf)
-    fields=[]
 
-    if metacls is META.PLAIN:
-        pass
+    # meta decoder
+    mdecode, mmask=dbr_meta(dbr)
 
-    elif metacls is META.STS:
-        conv=dbr_sts(dbf)
-        rmeta.status, rmeta.severity = conv.unpack(raw[:conv.size])
-        raw=raw[conv.size:]
+    rawmeta=list(mdecode.unpack(raw[:mdecode.size]))
+    raw=raw[mdecode.size:]
 
-    elif metacls is META.TIME:
-        conv=dbr_time(dbf)
-        rmeta.status, rmeta.severity, sec, nsec = conv.unpack(raw[:conv.size])
+    if mmask&METAPARTS.STS:
+        rmeta.status=STATUS.fromInt(rawmeta.pop(0))
+        rmeta.severity=SEVERITY.fromInt(rawmeta.pop(0))
+
+    if mmask&METAPARTS.TIME:
+        sec=rawmeta.pop(0)
+        nsec=rawmeta.pop(0)
         rmeta.stamp=sec+POSIX_TIME_AT_EPICS_EPOCH+float(nsec)*1e-9
-        raw=raw[conv.size:]
 
-    elif metacls is META.GR:
-        if dbf is DBF.ENUM:
-            conv=dbr_gr_enum
-            m = conv.unpack(raw[:dbr_gr_enum.size])
-            rmeta.status, rmeta.severity = m[:2]
-            nstrs = m[2]
-            rmeta.strs = m[3:(29)]
-            if nstrs<=26:
-                rmeta.strs=rmeta.strs[:nstrs]
+    if mmask&METAPARTS.REAL:
+        rmeta.precision=rawmeta.pop(0)
 
-        elif dbf in (DBF.FLOAT, DBF.DOUBLE):
-            conv = dbr_gr_real(dbf)
-            rmeta.status, rmeta.severity, rmeta.precision, rmeta.units, \
-            dU, dL, aU, wU, wL, aL = conv.unpack(raw[:conv.size])
-            rmeta.display=(dL,dU)
-            rmeta.warning, rmeta.alarm=(wL,wU), (aL,aU)
-            fields=['display', 'warning', 'alarm']
+    if mmask&METAPARTS.ENUM:
+        nstrs=min(26, rawmeta.pop(0))
+        assert len(rawmeta)==26
+        rmeta.strs=rawmeta[:nstrs]
+        rawmeta=[]
 
-        else:
-            conv = dbr_gr_integer(dbf)
-            rmeta.status, rmeta.severity, rmets.units, \
-            dU, dL, aU, wU, wL, aL = conv.unpack(raw[:conv.size])
-            rmeta.display=(dL,dU)
-            rmeta.warning, rmeta.alarm=(wL,wU), (aL,aU)
-            fields=['display', 'warning', 'alarm']
+    if mmask&METAPARTS.GR:
+        rmeta.units=rawmeta.pop(0)
+        vals=map(lambda x:mconv(x, prec=rmeta.precision),rawmeta[:6])
+        rawmeta=rawmeta[6:]
+        dU, dL, aU, wU, wL, aL = vals
+        
+        rmeta.display=(dL,dU)
+        rmeta.warning=(wL,wU)
+        rmeta.alarm  =(aL,aU)
 
-        raw=raw[conv.size:]
-            
-    else:
-        raise RuntimeError('meta data format not supported')
+    if mmask&METAPARTS.CTRL:
+        vals=map(lambda x:mconv(x, prec=rmeta.precision),rawmeta[:2])
+        rawmeta=rawmeta[:2]
+        cU, cL = vals
 
-    if metacls is not META.PLAIN:
-        rmeta.severity=SEVERITY.fromInt(rmeta.severity)
-        rmeta.status=STATUS.fromInt(rmeta.status)
+        rmeta.control=(cL,cU)
 
     if dbf!=DBF.STRING:
-        # remove zero padding
+        # remove zero padding from value
         dlen=dbf_element_size(dbf)*count
         raw=raw[:dlen]
 
@@ -440,9 +401,5 @@ def fromstring(raw, dbr, count, meta):
 
     value = vconv(value, prec=rmeta.precision,
                          strs=rmeta.strs)
-    for f in fields:
-        a, b = getattr(rmeta, f)
-        setattr(rmeta, f, (mconv(a, prec=rmeta.precision),
-                           mconv(b, prec=rmeta.precision)))
 
     return (value, rmeta)

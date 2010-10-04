@@ -4,7 +4,7 @@ from util.enum import Enum
 
 __all__=['SERVER_PORT','CLIENT_PORT','CA_VERSION',
          'POSIX_TIME_AT_EPICS_EPOCH',
-         'DBE','META','DBF','DBR',
+         'DBE','META','DBF','DBR','METAPARTS',
          'SEVERITY','STATUS',
          'dbf_elem_size',
          'dbr_to_dbf',
@@ -19,13 +19,25 @@ POSIX_TIME_AT_EPICS_EPOCH=631152000L
 
 DBE=Enum('DBE.',VALUE=1, ARCHIVE=2, LOG=2, ALARM=4, PROPERTY=8)
 
+# metadata parts
+METAPARTS=Enum('METAPARTS.',
+               NONE=0x00,
+               STS =0x01, # sts, sev
+               TIME=0x02, # stamp
+               ENUM=0x04, # strs
+               REAL=0x08, # precision
+               GR  =0x10, # display, warn, alarm
+               CTRL=0x20, # control
+               SPEC=0x80, # special
+              )
+
 # metadata classes
 META=Enum('META.',
-          PLAIN=0, # none
-          STS=1,   # sts
-          TIME=3,  # sts+time
-          GR=5,    # sts+gr
-          CTRL=13, # sts+gr+ctrl
+          PLAIN=METAPARTS.NONE,
+          STS=METAPARTS.STS,
+          TIME=METAPARTS.STS|METAPARTS.TIME,
+          GR=METAPARTS.STS|METAPARTS.GR,
+          CTRL=METAPARTS.STS|METAPARTS.GR|METAPARTS.CTRL,
          )
 
 # DBF and DBR types from db_access.h
@@ -129,7 +141,7 @@ _DBR2DBF={
     DBR.CTRL_SHORT   :(DBF.SHORT,  META.CTRL),
     DBR.CTRL_INT     :(DBF.INT,    META.CTRL),
     DBR.CTRL_FLOAT   :(DBF.FLOAT,  META.CTRL),
-    DBR.CTRL_ENUM    :(DBF.ENUM,   META.CTRL),
+    DBR.CTRL_ENUM    :(DBF.ENUM,   META.GR),
     DBR.CTRL_CHAR    :(DBF.CHAR,   META.CTRL),
     DBR.CTRL_LONG    :(DBF.LONG,   META.CTRL),
     DBR.CTRL_DOUBLE  :(DBF.DOUBLE,META.CTRL),
@@ -149,6 +161,13 @@ for k,v in _DBR2DBF.iteritems():
     if v in _DBF2DBR and k >= _DBF2DBR[v]:
         continue # for dups use lower
     _DBF2DBR[v]=k
+# duplicates and special cases
+for dup, src in [((DBF.STRING, META.CTRL),DBR.STS_STRING),
+                 ((DBF.STRING, META.GR),  DBR.STS_STRING),
+                 ((DBF.ENUM,   META.CTRL),DBR.GR_ENUM),
+                ]:
+    assert dup not in _DBF2DBR
+    _DBF2DBR[dup]=src
 def dbf_to_dbr(dbf, meta):
     return _DBF2DBR[(dbf, meta)]
 

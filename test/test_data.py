@@ -27,32 +27,6 @@ class TestSerialize(unittest.TestCase):
             
             self.assertEqual(two, inp)
 
-    def test_sts(self):
-        data=[(defs.DBR.INT, (0x1234,0x1020),
-               '\x12\x34\x10\x20'),
-              (defs.DBR.CHAR, (0x1234,0x1020),
-               '\x12\x34\x10\x20\x00'),
-              (defs.DBR.DOUBLE, (0x1234,0x1020),
-               '\x12\x34\x10\x20\x00\x00\x00\x00'),
-             ]
-
-        for dbr, inp, out in data:
-            conv=cadata.dbr_sts(dbr)
-            
-            one=conv.pack(*inp)
-            
-            self.assertEqual(one, out)
-            
-            two=conv.unpack(out)
-            
-            self.assertEqual(two, inp)
-
-    #TODO: test time
-
-    #TODO: test GR
-
-    #TODO: test ctrl
-
     def test_stringarray(self):
         # strings padded to 40 bytes
         raw=reduce(str.__add__,[str(i)+39*'\0' for i in range(1,10)],'')
