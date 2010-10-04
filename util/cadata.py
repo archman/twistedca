@@ -220,12 +220,12 @@ class caMetaProxy(object):
         object.__setattr__(self, name, val)
 
 class caMeta(object):
-    def __init__(self, dbf, **kwargs):
-        self.dbf=dbf
-        self.units=kwargs.pop('units','')
-        self.stamp=kwargs.pop('stamp',0.0)
-        for f in ['status','severity','precision']:
-            setattr(self, f, kwargs.pop(f,0))
+    def __init__(self, dbf, units='', stamp=0.0,
+                       status=0, severity=0, precision=0,
+                       **kwargs):
+        self.dbf, self.units, self.stamp=dbf, units, stamp
+        self.status, self.severity = status, severity
+        self.precision=precision
         l=dbf_default_limits(dbf)
         for p in ['display', 'warning', 'alarm', 'control']:
             setattr(self, p, kwargs.pop(p,l))
