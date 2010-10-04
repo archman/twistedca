@@ -127,7 +127,10 @@ class Resolver(object):
         #TODO: TCP endpoints
 
     def _udp(self, pkt, srv, _):
-        if pkt.cmd==6:
+        if pkt.cmd==0:
+            pass
+
+        elif pkt.cmd==6:
             
             req=self.reqID.pop(pkt.p2)
             if req is None:
