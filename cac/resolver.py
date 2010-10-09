@@ -145,7 +145,7 @@ class Resolver(object):
                 return
             self.reqName.pop(req.name)
 
-            req.received(srv)
+            req.received((srv[0], pkt.dtype))
 
         elif pkt.cmd==14:
             
