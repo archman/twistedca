@@ -66,8 +66,6 @@ class CAClientcircuit(Protocol):
         self.version=min(defs.CA_VERSION, pkt.count)
         self.prio=pkt.dtype
         log.debug('Version %s',self)
-        
-        self.factory.circuitReady(self.transport.connector, self)
 
     def ping(self, pkt, x, y):
         self.send(pkt.pack())
@@ -102,6 +100,8 @@ class CAClientcircuit(Protocol):
         msg+=CAmessage(cmd=21, size=len(host), body=host).pack()
         
         self.transport.write(msg)
+        
+        self.factory.circuitReady(self.transport.connector, self)
 
     def connectionLost(self, reason):
         self.client.dispatchtcp(None, self.peer, self)
