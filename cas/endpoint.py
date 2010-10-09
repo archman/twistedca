@@ -146,6 +146,9 @@ class CAcircuit(Protocol):
 
     def send(self, msg):
         self.transport.write(msg)
+
+    def sendto(self, msg, peer=None):
+        self.transport.write(msg)
     
     def dataReceived(self, msg):
 

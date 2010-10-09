@@ -77,7 +77,7 @@ class Server(object):
         self.up.startListening()
 
         self._udp={0:self.ignore,6:self.nameres}
-        self._tcp={}
+        self._tcp={6:self.nameres}
 
         self.pvs={}
         for pv in pvs:
