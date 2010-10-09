@@ -19,7 +19,6 @@ from cas.endpoint import UDPpeer
     
 class Cancelled(Exception):
     pass
-requestCancelled=Failure(Cancelled)
 
 class Request(object):
     
@@ -52,13 +51,21 @@ class Request(object):
             self.T=None
         self.d.callback(srv)
 
-    def cancel(self, err):
+    def cancel(self):
         if self.T is not None:
             self.T.cancel()
             self.T=None
+
+        # once the manager is informed future requests
+        # for this name will result in a new request
         self.manager._cancel(self)
-        self.d.errback(requestCancelled)
-        return err
+
+        # The cancel will propogate through all handlers
+        # so we must catch it at the end to avoid
+        # an 'Unhandled error in Deferred:' warning
+        self.d.addErrback(lambda x:x.trap(Cancelled))
+
+        self.d.errback(Cancelled('Request cancelled'))
 
 class Resolver(object):
     
