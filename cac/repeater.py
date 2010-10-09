@@ -5,12 +5,11 @@ from socket import INADDR_LOOPBACK, inet_aton
 from copy import copy
 from struct import Struct
 
-ipv4=Struct('!I')
-
 log=logging.getLogger('cac.repeater')
 
 from util.ca import CAmessage
 from util.defs import CLIENT_PORT
+from util.udp import addr2int
 
 from twisted.internet import reactor
 from twisted.internet.udp import Port
@@ -81,7 +80,7 @@ class CARepeaterProtocol(DatagramProtocol):
             if pkt.cmd==24:
                 self.regreq(peer)
             elif pkt.cmd==13 and pkt.p2==0:
-                pkt.p2=ipv4.unpack(inet_aton(peer[0]))[0]
+                pkt.p2=addr2int(peer[0])
                 self.repeat(pkt)
             else:
                 self.repeat(pkt)

@@ -11,6 +11,8 @@ log=logging.getLogger('util.ifinspect')
 from socket import inet_ntoa, inet_aton, htonl, htons
 from fcntl import ioctl
 
+from util.udp import int2addr
+
 __all__=['getifinfo']
 
 if sys.version_info < (2, 6, 0):
@@ -132,7 +134,7 @@ def unix():
             addr=ctypes.cast(ctypes.byref(intr.addr),
                              ctypes.POINTER(sockaddr_in))[0]
             # go from integer in host order to string
-            ip=inet_ntoa(inet_aton(str(htonl(addr.addr))))
+            ip=int2addr(socket.htonl(addr.addr))
             iface.addr=ip
             
             x=ioctl(a.fileno(), SIOCGIFFLAGS, buffer(intr))

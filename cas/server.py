@@ -18,8 +18,6 @@ from util.ifinspect import getifinfo
 
 from struct import Struct
 
-ipv4=Struct('!I')
-
 class Server(object):
     
     def __init__(self, conf=Config.default,
@@ -110,7 +108,7 @@ class Server(object):
 
             # Interface address will be added by receiving
             # CA repeater
-            #b.p2=ipv4.unpack(inet_aton(host.host))[0]
+            #b.p2=addr2int(host.host)
 
             try:
                 self.up.write(b, (intr, self.cport))
