@@ -43,6 +43,7 @@ class CAcircuit(Protocol):
         self.next_sid=0
     
     def dropchan(self, channel):
+        assert channel.sid in self.channels
         self.channels.pop(channel.sid)
 
     # CA actions

@@ -138,8 +138,8 @@ class Resolver(object):
             pass
 
         elif pkt.cmd==6:
-            
-            req=self.reqID.pop(pkt.p2)
+
+            req=self.reqID.pop(pkt.p2, None)
             if req is None:
                 log.warning('Ignored reply for non-existent search')
                 return

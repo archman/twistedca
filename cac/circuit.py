@@ -80,7 +80,8 @@ class CAClientcircuit(Protocol):
         chan.dispatch(pkt, peer, circuit)
 
     def forwardIOID(self, pkt, peer, circuit):
-        act=self.pendingActions.pop(pkt.p2)
+
+        act=self.pendingActions.pop(pkt.p2, None)
         if act is None:
             log.warning('Reply for non-existent action %d',pkt.p2)
             return
