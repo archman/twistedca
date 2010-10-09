@@ -18,8 +18,9 @@ class CAClientChannel(object):
                  context=CAClient.default):
         self.name=name
         self._conCB, self._ctxt=connectCB, context
-        self._eventDis=Deferred()
-        self._eventCon=None
+        self._eventDis=succeed(self)
+        self._eventCon=Deferred()
+        self._connected=False
         self._d=None
 
         self._chan={18:self._channelOk,
@@ -27,6 +28,8 @@ class CAClientChannel(object):
                     26:self._channelFail,
                     27:self._disconn,
                    }
+
+        self._ctxt.closeList.add(self.close) #TODO: remove
 
         self._reset()
 
@@ -37,14 +40,17 @@ class CAClientChannel(object):
 
         if self._d:
             self._d.errback()
+            self._d=None
 
         self.cid=self.sid=self.dbr=None
-        self._circ=self._d=None
+        self._circ=None
         self.maxcount=self.rights=0
         self.state=self.S_init
 
-        self._eventDis.callback(self)
-        self._eventCon=Deferred()
+        if self._connected:
+            self._eventDis.callback(self)
+            self._eventCon=Deferred()
+            self._connected=False
 
         if not self._ctxt.running:
             self._eventDis=None
@@ -62,7 +68,7 @@ class CAClientChannel(object):
 
     @property
     def connected(self):
-        return self.state is self.S_connect
+        return self._connected
 
     def _connect(self):
         log.debug('Channel %s connecting...',self.name)
@@ -87,6 +93,7 @@ class CAClientChannel(object):
 
             self._eventDis=Deferred()
             self._eventCon.callback(self)
+            self._connected-True
 
             self._conCB(self, True)
 

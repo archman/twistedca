@@ -12,6 +12,9 @@ from util.config import Config
 from resolver import Resolver
 from circuit import CACircuitFactory
 
+class CAClientShutdown(Exception):
+    pass
+
 class CAClient(object):
     # default client context
     default=None
@@ -24,7 +27,7 @@ class CAClient(object):
         self.resolv=Resolver()
         
         self.circuits=CACircuitFactory(self)
-        self.channels=[]
+        self.closeList=set()
 
         if host is None:
             from socket import gethostname
@@ -41,8 +44,8 @@ class CAClient(object):
     def close(self):
         self.running=False
 
-        for c in copy(self.channels):
-            c.close()
+        for c in copy(self.closeList):
+            c()
 
         self.resolv.close()
 

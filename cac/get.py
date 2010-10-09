@@ -9,6 +9,7 @@ from twisted.internet.defer import Deferred
 from util.cadata import caMeta, fromstring, dbr_to_dbf
 from util.ca import CAmessage
 from util.defs import *
+from client import CAClientShutdown
 
 
 class CAGet(object):
@@ -19,7 +20,7 @@ class CAGet(object):
         self._meta, self.count = meta, count
         self.dbf_conv=dbf_conv
 
-        self.ioid=None
+        self.done, self.ioid=True, None
 
         if dbf_conv is None and dbf is not None:
             self.meta=caMeta(dbf)
@@ -28,9 +29,18 @@ class CAGet(object):
         else:
             self.meta=None
 
+        self._chan._ctxt.closeList.add(self.close) #TODO: remove
+
         self.restart()
 
+    def close(self):
+        if not self.done:
+            self._result.errback(CAClientShutdown('Get aborted'))
+
     def restart(self):
+        if not self.done:
+            return
+
         self.done=False
 
         self._result=Deferred()
