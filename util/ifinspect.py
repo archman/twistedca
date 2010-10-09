@@ -164,6 +164,14 @@ def unix():
 
     return iflist
 
+def default():
+    i=interface()
+    i.name='def'
+    i.addr='' # any address
+    i.broadcast='255.255.255.255'
+    i.loopback=False
+    return set([i])
+
 global ifinfo
 ifinfo=None
 
@@ -171,10 +179,15 @@ def getifinfo(rebuild=True):
     global ifinfo
     if ifinfo is None or rebuild:
 
-        if sys.platform != 'WIN32':
-            ifinfo=unix()
-        else:
-            raise NotImplemented('Network interface introspection not implemented')
+        try:
+            if sys.platform != 'WIN32':
+                ifinfo=unix()
+            else:
+                raise NotImplemented('Network interface '
+                          'introspection not implemented')
+        except Exception,e:
+            log.error("network iface detection failed: "+str(e))
+            ifinfo=default()
 
     return ifinfo
 
