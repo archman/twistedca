@@ -6,12 +6,41 @@ a list with information on each of the system
 network interfaces
 """
 
-import sys, socket, logging, ctypes
+import sys, socket, logging, ctypes, array
 log=logging.getLogger('util.ifinspect')
 from socket import inet_ntoa, inet_aton, htonl, htons
 from fcntl import ioctl
 
 __all__=['getifinfo']
+
+if sys.version_info < (2, 6, 0):
+    def str2struct(string, cstruct):
+        """Cast a python string containing a byte
+        array into a C structure
+        """
+        from ctypes import sizeof, pointer, POINTER, memmove
+
+        assert not hasattr(cstruct, 'contents'), "must _not_ be a POINTER type"
+        # copy to a writable buffer first
+        a=array.array('c')
+        a.fromstring(string)
+
+        # find address
+        base, l = a.buffer_info()
+        assert l==sizeof(cstruct), 'string size must match struct size'
+
+        # cast buffer pointer to struct pointer
+        b=ctypes.cast(base, POINTER(cstruct))
+
+        # make a copy
+        c=cstruct()
+        memmove(pointer(c), b, sizeof(c))
+
+        return c
+else:
+    def str2struct(string,cstruct):
+        return cstruct.from_buffer_copy(buffer(string))
+
 
 class interface(object):
     name=None
@@ -107,18 +136,23 @@ def unix():
             iface.addr=ip
             
             x=ioctl(a.fileno(), SIOCGIFFLAGS, buffer(intr))
-            intr=ifreq.from_buffer_copy(x)
+
+            intrflags=str2struct(x,ifreq)
+            assert intrflags.name==intr.name
+
+            flags=intrflags.sval
             
-            if not intr.sval&IFF_UP:
+            if not flags&IFF_UP:
                 # only include active interfaces
                 log.debug('%s is down, skipping...',iface.name)
                 continue
 
-            iface.loopback=bool(intr.sval&IFF_LOOPBACK)
+            iface.loopback=bool(flags&IFF_LOOPBACK)
 
-            if intr.sval&IFF_BROADCAST:
+            if flags&IFF_BROADCAST:
                 x=ioctl(a.fileno(), SIOCGIFBRDADDR, buffer(intr))
-                intr=ifreq.from_buffer_copy(x)
+                #intr=ifreq.from_buffer_copy(x)
+                intr=str2struct(x,ifreq)
                 addr=ctypes.cast(ctypes.byref(intr.addr),
                                 ctypes.POINTER(sockaddr_in))[0]
                 ip=inet_ntoa(inet_aton(str(htonl(addr.addr))))
