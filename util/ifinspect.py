@@ -157,7 +157,7 @@ def unix():
                 intr=str2struct(x,ifreq)
                 addr=ctypes.cast(ctypes.byref(intr.addr),
                                 ctypes.POINTER(sockaddr_in))[0]
-                ip=inet_ntoa(inet_aton(str(htonl(addr.addr))))
+                ip=int2addr(htonl(addr.addr))
                 iface.broadcast=ip
 
             iflist.add(iface)
