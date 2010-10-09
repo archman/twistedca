@@ -5,6 +5,7 @@ import logging, sys
 log=logging.getLogger('caget')
 
 from twisted.internet import reactor
+from twisted.internet.error import ReactorNotRunning
 from twisted.internet.defer import DeferredList
 from cac.clichannel import CAClientChannel
 from cac.get import CAGet
@@ -88,19 +89,28 @@ def channelCB(chan, status):
 
 def data(data, pv, cls):
     value,meta=data
-    print pv,
+    print pv,':',
     for v in value:
         print v,
     print printMeta(meta,cls),
     return data
 
+def nodata(_, pv):
+    print pv,': *** No Data ***'
+
 def stop(x):
-    reactor.stop()
+    try:
+        reactor.stop()
+    except ReactorNotRunning:
+        pass
     return x
 
 def timeout():
     log.fatal('Timeout!')
-    reactor.stop()
+    try:
+        reactor.stop()
+    except ReactorNotRunning:
+        pass
 
 if opt.tmo >=0.00001:
     reactor.callLater(opt.tmo, timeout)
@@ -113,6 +123,7 @@ for pv in pvs:
     g=CAGet(chan, dbf_req, count, meta=meta_req,
             dbf_conv=dbf_dis)
     g.data.addCallback(data, pv, meta_req)
+    g.data.addErrback(nodata, pv)
     gets.append(g.data)
 
 done=DeferredList(gets)
