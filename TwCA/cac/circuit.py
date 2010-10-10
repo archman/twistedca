@@ -25,6 +25,7 @@ class CAClientcircuit(Protocol):
         self._circ={0 :self.caver,
                     15:self.forwardIOID,
                     18:self.forwardCID,
+                    19:self.forwardIOID,
                     22:self.forwardCID,
                     23:self.ping,
                     26:self.forwardCID,

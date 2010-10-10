@@ -67,6 +67,6 @@ class CAClient(object):
     def dispatchtcp(self, pkt, peer, circuit):
         if pkt is None:
             return # circuit closed
-        log.info('Client received from %s %s',peer,pkt)
+        log.info('Client received unexpected from %s %s',peer,pkt)
 
 CAClient.default=CAClient()
