@@ -7,9 +7,9 @@ from struct import Struct
 
 log=logging.getLogger('cac.repeater')
 
-from util.ca import CAmessage
-from util.defs import CLIENT_PORT
-from util.udp import addr2int
+from TwCA.util.ca import CAmessage
+from TwCA.util.defs import CLIENT_PORT
+from TwCA.util.udp import addr2int
 
 from twisted.internet import reactor
 from twisted.internet.udp import Port

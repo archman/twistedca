@@ -7,10 +7,11 @@ log=logging.getLogger('caget')
 from twisted.internet import reactor
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet.defer import DeferredList
-from cac.clichannel import CAClientChannel
-from cac.get import CAGet
-from util.defs import *
-from util.cadata import printMeta
+
+from TwCA.cac.clichannel import CAClientChannel
+from TwCA.cac.get import CAGet
+from TwCA.util.defs import *
+from TwCA.util.cadata import printMeta
 
 from optparse import OptionParser
 

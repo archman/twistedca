@@ -3,18 +3,19 @@
 import logging, socket
 log=logging.getLogger('cas.server')
 from errno import EPERM, EINVAL
+from socket import inet_aton
 
 from twisted.internet import reactor,tcp,protocol
 from twisted.internet.task import LoopingCall
 from twisted.internet.error import CannotListenError
 
+from TwCA.util.ca import CAmessage, packSearchBody
+from TwCA.util.udp import SharedUDP
+from TwCA.util.defs import *
+from TwCA.util.config import Config
+from TwCA.util.ifinspect import getifinfo
+
 from endpoint import UDPpeer, CAcircuit
-from util.ca import CAmessage, packSearchBody
-from util.udp import SharedUDP
-from socket import inet_aton
-from util.defs import *
-from util.config import Config
-from util.ifinspect import getifinfo
 
 from struct import Struct
 

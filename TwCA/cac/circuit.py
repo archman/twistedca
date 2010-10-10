@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import socket, logging
-from util.ca import CAmessage, padString
-from util import defs
-from util.idman import IDManager
 from copy import copy
 
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet.defer import Deferred, maybeDeferred
+
+from TwCA.util.ca import CAmessage, padString
+from TwCA.util import defs
+from TwCA.util.idman import IDManager
 
 log=logging.getLogger('cac.circuit')
 

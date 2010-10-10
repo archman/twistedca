@@ -10,11 +10,13 @@ from socket import inet_ntoa, inet_aton
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 
+from TwCA.util.defs import SERVER_PORT
+from TwCA.util.udp import SharedUDP
+from TwCA.util.ifinspect import getifinfo
+
+from TwCA.cas.endpoint import UDPpeer
+
 from repclient import client
-from util.defs import SERVER_PORT
-from util.udp import SharedUDP
-from cas.endpoint import UDPpeer
-from util.ifinspect import getifinfo
 
 class IOC(object):
     

@@ -11,7 +11,7 @@ log=logging.getLogger('util.ifinspect')
 from socket import inet_ntoa, inet_aton, htonl, htons
 from fcntl import ioctl
 
-from util.udp import int2addr
+from udp import int2addr
 
 __all__=['getifinfo']
 

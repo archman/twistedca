@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from util.enum import Enum
+from enum import Enum
 
 __all__=['SERVER_PORT','CLIENT_PORT','CA_VERSION',
          'POSIX_TIME_AT_EPICS_EPOCH',

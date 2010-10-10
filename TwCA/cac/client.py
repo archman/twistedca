@@ -8,7 +8,8 @@ from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.internet.defer import Deferred, fail
 
-from util.config import Config
+from TwCA.util.config import Config
+
 from resolver import Resolver
 from circuit import CACircuitFactory
 

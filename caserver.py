@@ -5,10 +5,10 @@ import logging
 
 from twisted.internet import reactor
 
-from util.cadata import caMeta, caMetaProxy
-from cas.pv import PV
-from cas.server import Server
-from util.defs import *
+from TwCA.util.cadata import caMeta, caMetaProxy
+from TwCA.cas.pv import PV
+from TwCA.cas.server import Server
+from TwCA.util.defs import *
 
 def main():
     lmeta=caMeta(DBF.LONG)

@@ -6,9 +6,10 @@ log=logging.getLogger('cac.get')
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 
-from util.cadata import caMeta, fromstring, dbr_to_dbf
-from util.ca import CAmessage
-from util.defs import *
+from TwCA.util.cadata import caMeta, fromstring, dbr_to_dbf
+from TwCA.util.ca import CAmessage
+from TwCA.util.defs import *
+
 from client import CAClientShutdown
 
 

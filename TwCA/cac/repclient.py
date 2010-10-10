@@ -5,8 +5,8 @@ from socket import inet_aton
 
 log=logging.getLogger('cac.repclient')
 
-from util.ca import CAmessage
-from util.defs import CLIENT_PORT
+from TwCA.util.ca import CAmessage
+from TwCA.util.defs import CLIENT_PORT
 
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall

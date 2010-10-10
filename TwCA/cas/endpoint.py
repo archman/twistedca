@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import socket, logging
-from util.ca import CAmessage
-from channel import Channel
-from util import defs
 from copy import copy
 
 from twisted.internet.protocol import Protocol, DatagramProtocol
 
-from util.config import Config
+from TwCA.util import defs
+from TwCA.util.ca import CAmessage
+from TwCA.util.config import Config
+
+from channel import Channel
 
 log=logging.getLogger('cas.endpoint')
 

@@ -8,7 +8,7 @@ from array import array
 from struct import Struct
 from time import time
 
-from util.ca import padString
+from ca import padString
 from defs import *
 from convert import dbr_convert_value, dbr_convert_meta_value
 from copy import copy

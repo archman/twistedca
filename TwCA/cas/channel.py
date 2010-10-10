@@ -2,9 +2,9 @@
 
 import logging
 from pv import CAError
-from util.ca import CAmessage, padString, packCAerror, monitormask
-from util.error import ECA_NORMAL, ECA_BADCHID
-from util import error
+from TwCA.util.ca import CAmessage, padString, packCAerror, monitormask
+from TwCA.util.error import ECA_NORMAL, ECA_BADCHID
+from TwCA.util import error
 
 log=logging.getLogger('cas.channel')
 

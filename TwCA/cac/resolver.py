@@ -11,11 +11,11 @@ from twisted.internet.defer import Deferred
 from twisted.internet.udp import Port
 from twisted.python.failure import Failure
 
-from util.defs import SERVER_PORT, CA_VERSION
-from util.config import Config
-from util.ca import CAmessage, searchbody, padString
-from util.ifinspect import getifinfo
-from cas.endpoint import UDPpeer
+from TwCA.util.defs import SERVER_PORT, CA_VERSION
+from TwCA.util.config import Config
+from TwCA.util.ca import CAmessage, searchbody, padString
+from TwCA.util.ifinspect import getifinfo
+from TwCA.cas.endpoint import UDPpeer
     
 class Cancelled(Exception):
     pass
