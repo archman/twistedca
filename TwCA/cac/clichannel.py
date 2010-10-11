@@ -39,8 +39,8 @@ class CAClientChannel(object):
             return
 
         if self._d:
-            self._d.errback()
-            self._d=None
+            d, self._d = self._d, None
+            d.errback(RuntimeError('Circuit Lost'))
 
         self.cid=self.sid=self.dbr=None
         self._circ=None
@@ -128,8 +128,8 @@ class CAClientChannel(object):
     def _circuitLost(self):
         log.debug('Channel %s lost circuit',self.name)
         if self._d:
-            self._d.errback()
-            self._d=None
+            d, self._d = self._d, None
+            d.errback(RuntimeError('Circuit Lost'))
         
         self._reset()
 
@@ -147,8 +147,8 @@ class CAClientChannel(object):
         
         self._reset()
         if self._d:
-            self._d.callback(False)
-            self._d=None
+            d, self._d = self._d, None
+            d.callback(False)
 
     def _rights(self, pkt, peer, circuit):
         self.rights=pkt.p2
@@ -159,8 +159,8 @@ class CAClientChannel(object):
         if self.sid is None or self.rights is None:
             return
         if self._d:
-            self._d.callback(True)
-            self._d=None
+            d, self._d = self._d, None
+            d.callback(True)
 
     def dispatch(self, pkt, peer, circuit):
         assert circuit is self._circ
