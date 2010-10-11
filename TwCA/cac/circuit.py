@@ -23,6 +23,7 @@ class CAClientcircuit(Protocol):
         self.in_buffer=''
         
         self._circ={0 :self.caver,
+                    1 :self.forwardSubID,
                     15:self.forwardIOID,
                     18:self.forwardCID,
                     19:self.forwardIOID,
@@ -84,6 +85,14 @@ class CAClientcircuit(Protocol):
         act=self.pendingActions.pop(pkt.p2, None)
         if act is None:
             log.warning('Reply for non-existent action %d',pkt.p2)
+            return
+        act.dispatch(pkt, peer, circuit)
+
+    def forwardSubID(self, pkt, peer, circuit):
+
+        act=self.subscriptions.get(pkt.p2, None)
+        if act is None:
+            log.warning('Reply for non-existent subscription %d',pkt.p2)
             return
         act.dispatch(pkt, peer, circuit)
 

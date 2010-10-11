@@ -89,11 +89,14 @@ class CAClientChannel(object):
                 reactor.callLater(30.0, self._connect)
                 return
 
+            if self._connected:
+                return
+
             self.state=self.S_connect
 
             self._eventDis=Deferred()
             self._eventCon.callback(self)
-            self._connected-True
+            self._connected=True
 
             self._conCB(self, True)
 
