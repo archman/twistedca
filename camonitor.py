@@ -90,8 +90,11 @@ def pad(pv):
     return pv+' '*(padlen-len(pv))
 
 def printTime(stamp):
-    sec=strftime("%a %b %d %Y %H:%M:%S",localtime(stamp))
-    ns='%0.6f'%(stamp%1)
+    try:
+        sec=strftime("%a %b %d %Y %H:%M:%S",localtime(stamp))
+    except ValueError:
+        return '<undefined>'
+    ns='%0.06f'%(stamp%1)
     ns=ns[1:] # trim leading zero
     return sec+ns
 
