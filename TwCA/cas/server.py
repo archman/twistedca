@@ -2,7 +2,7 @@
 
 import logging, socket
 log=logging.getLogger('cas.server')
-from errno import EPERM, EINVAL
+from errno import EPERM, EINVAL, ENETUNREACH
 from socket import inet_aton
 
 from twisted.internet import reactor,tcp,protocol
@@ -116,7 +116,7 @@ class Server(object):
             except socket.error, e:
                 #TODO: Why is this raising EINVAL for some bcast?
                 #print repr(b), (intr, self.cport)
-                if e.errno not in (EPERM, EINVAL):
+                if e.errno not in (EPERM, EINVAL, ENETUNREACH):
                     raise
 
         self.beaconID=self.beaconID+1
