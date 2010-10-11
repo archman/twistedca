@@ -8,6 +8,7 @@ from twisted.internet import reactor
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet.defer import DeferredList
 
+from TwCA import __version__ as TwCAVersion
 from TwCA.cac.clichannel import CAClientChannel
 from TwCA.cac.get import CAGet
 from TwCA.util.defs import *
@@ -15,8 +16,10 @@ from TwCA.util.cadata import printMeta
 
 from optparse import OptionParser
 
-p=OptionParser(version='pre1',description="""
-Channel Access client
+p=OptionParser(version=TwCAVersion,
+usage="%prog [options] pvname value ...",
+description="""
+Channel Access read
 """)
 
 p.add_option('-v', '--verbose', default=0,

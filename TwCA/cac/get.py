@@ -64,7 +64,7 @@ class CAGet(object):
         dbr=dbf_to_dbr(dbf, self._meta)
 
         cnt=self.count
-        if cnt is None:
+        if cnt is None or cnt>chan.maxcount:
             cnt=chan.maxcount
 
         msg=CAmessage(cmd=15, dtype=dbr, count=cnt,
@@ -95,9 +95,9 @@ class CAGet(object):
 
         data = fromstring(pkt.body, pkt.dtype, pkt.count, meta)
 
-        self._result.callback(data)
         self.ioid=None
         self.done=True
+        self._result.callback(data)
 
     def __str__(self):
         cnt='Native' if self.count is None else self.count
