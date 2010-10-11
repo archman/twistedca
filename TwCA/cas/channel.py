@@ -5,6 +5,8 @@ from pv import CAError
 from TwCA.util.ca import CAmessage, padString, packCAerror, monitormask
 from TwCA.util.error import ECA_NORMAL, ECA_BADCHID
 from TwCA.util import error
+from TwCA.util.cadata import dbf_element_size
+from TwCA.util.defs import dbr_to_dbf
 
 log=logging.getLogger('cas.channel')
 
@@ -133,9 +135,24 @@ class monitor(object):
         if (self.mask&mask)==0:
             return
         try:
+            count=self.count
+            if count==0 and self.channel.circuit.version>=13:
+                # when a client requests a dcount it must get the exact
+                # count.  Additional space is zeros.
+                # with version 13 a request for zero data get the
+                # current native size
+                count=self.channel.pv.count
+
             data, count = self.channel.pv.get(self.channel,
                                               self.dbr,
-                                              self.count)
+                                              count)
+
+            if self.count!=0 and count<self.count:
+                # Zero pad data
+                dbf, _ = dbr_to_dbf(self.dbr)
+                pad=dbf_element_size(dbf)*(self.count-count)
+                data=padString(data+'\0'*pad)
+                count=self.count
 
             pkt = CAmessage(cmd=1, size=len(data), dtype=self.dbr,
                             count=count, p1=ECA_NORMAL, p2=self.ioid,

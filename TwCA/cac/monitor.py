@@ -63,7 +63,7 @@ class CAMonitor(object):
     def _chanOk(self, chan):
         assert self._chan is chan
         
-        #ver=chan._circ.version
+        ver=chan._circ.version
 
         self.subid=chan._circ.subscriptions.add(self)
 
@@ -72,7 +72,8 @@ class CAMonitor(object):
             dbf,_=dbr_to_dbf(chan.dbr)
         dbr=dbf_to_dbr(dbf, self._meta)
 
-        cnt=self.count
+        # use dynamic array length whenever possible
+        cnt=self.count if ver<13 else 0
         if cnt is None or cnt>chan.maxcount:
             cnt=chan.maxcount
 

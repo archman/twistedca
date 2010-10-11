@@ -30,6 +30,10 @@ class PV(object):
     def maxcount(self):
         return self._maxcount
 
+    @property
+    def count(self):
+        return len(self.value)
+
     def info(self, channel):
         return (self.meta.dbf, self._maxcount)
 
@@ -60,9 +64,6 @@ class PV(object):
         self.value=val
         self.post(DBE.VALUE|DBE.LOG)
         return True
-
-    def monitor(self, channel, dtype, count, mask):
-        return self.get(channel, dtype, count)
 
     def post(self,mask):
         for c in self.channels:
