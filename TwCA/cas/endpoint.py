@@ -18,7 +18,7 @@ class CAcircuit(Protocol):
     def __init__(self):
         self.server, self.peer=None, None
     
-        self.prio, self.version=0, 10
+        self.prio, self.version=0, 11
 
         self.user,self.host=None,None
         

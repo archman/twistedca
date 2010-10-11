@@ -18,7 +18,7 @@ class CAClientcircuit(Protocol):
     def __init__(self):
         self.client, self.peer=None, None
     
-        self.prio, self.version=0, 10
+        self.prio, self.version=0, 11
         
         self.in_buffer=''
         
