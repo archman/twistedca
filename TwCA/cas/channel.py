@@ -49,8 +49,16 @@ class Channel(object):
     def readnotify(self, pkt, peer, circuit):
         log.debug('Read %s from %s',self.pv.name,peer)
         try:
+            pkt.count=min(pkt.count, self.pv.maxcount)
             data, count=self.pv.get(self, pkt.dtype, pkt.count)
-            
+
+            if count<pkt.count:
+                # Zero pad data
+                dbf, _ = dbr_to_dbf(pkt.dtype)
+                pad=dbf_element_size(dbf)*(pkt.count-count)
+                data=padString(data+'\0'*pad)
+                count=pkt.count
+
             pkt.cmd=15
             pkt.size=len(data)
             pkt.count=count
