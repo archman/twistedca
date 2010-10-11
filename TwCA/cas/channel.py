@@ -47,7 +47,7 @@ class Channel(object):
             c.post(mask)
 
     def readnotify(self, pkt, peer, circuit):
-        log.debug('Read %s',self.pv.name)
+        log.debug('Read %s from %s',self.pv.name,peer)
         try:
             data, count=self.pv.get(self, pkt.dtype, pkt.count)
             
@@ -69,7 +69,7 @@ class Channel(object):
         self.circuit.send(raw)
 
     def write(self, pkt, peer, circuit):
-        log.debug('Write %s',self.pv.name)
+        log.debug('Write %s from %s',self.pv.name,peer)
         try:
             self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
             
@@ -142,6 +142,7 @@ class monitor(object):
                 # with version 13 a request for zero data get the
                 # current native size
                 count=self.channel.pv.count
+            count=min(count, self.channel.pv.maxcount)
 
             data, count = self.channel.pv.get(self.channel,
                                               self.dbr,
