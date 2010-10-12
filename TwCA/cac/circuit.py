@@ -157,9 +157,10 @@ class CACircuitFactory(ClientFactory):
 
     def close(self):
         for c in copy(self.circuits.values()):
+            c._persist=False
             c.disconnect()
 
-    def requestCircuit(self, srv):
+    def requestCircuit(self, srv, persist=None):
         circ=self.circuits.get(srv)
         if circ is None:
 
@@ -168,7 +169,12 @@ class CACircuitFactory(ClientFactory):
             circ=reactor.connectTCP(host, port, self, timeout=15)
             circ.circDeferred=Deferred()
             circ.circDest=srv
+            circ._persist=False
+            circ._nextattempt=0.1
             self.circuits[srv]=circ
+
+        if persist is not None:
+            circ._persist=persist
 
         return circ.circDeferred
 
@@ -180,12 +186,23 @@ class CACircuitFactory(ClientFactory):
     def clientConnectionFailed(self, circ, _):
         assert circ.circDest in self.circuits
 
-        circ.circDeferred.errback(RuntimeError('Circuit lost'))
+        if not circ._persist:
+            circ.circDeferred.errback(RuntimeError('Circuit lost'))
+            self.circuits.pop(circ.circDest)
+            return
 
-        self.circuits.pop(circ.circDest)
+        reactor.callLater(circ._nextattempt, circ.connect)
 
     def clientConnectionLost(self, circ, _):
         assert circ.circDest in self.circuits
 
-        self.circuits.pop(circ.circDest)
+        if not circ._persist:
+            self.circuits.pop(circ.circDest)
+            return
+
+        log.debug('Reconnect persistent circuit to %s',
+                  circ.circDest)
+        circ._nextattempt=0.1
+        circ.circDeferred=Deferred()
+        circ.connect()
 
