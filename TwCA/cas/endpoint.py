@@ -20,7 +20,7 @@ class CAcircuit(Protocol):
     
         self.prio, self.version=0, 11
 
-        self.user,self.host=None,None
+        self.user,self.host="<NOONE>","<ANONYMOUS>"
         
         self.in_buffer=''
         
