@@ -25,9 +25,9 @@ class CAClient(object):
     def __init__(self, conf=Config.default, user=None, host=None):
         self.conf=conf
         
-        self.resolv=Resolver()
-        
         self.circuits=CACircuitFactory(self)
+        
+        self.resolv=Resolver(self.circuits, conf)
         self.closeList=set()
 
         if host is None:
@@ -67,6 +67,10 @@ class CAClient(object):
     def dispatchtcp(self, pkt, peer, circuit):
         if pkt is None:
             return # circuit closed
-        log.info('Client received unexpected from %s %s',peer,pkt)
+
+        if pkt.cmd in (6,14):
+            self.resolv._dataRx(pkt,(peer.host,peer.port),circuit)
+        else:
+            log.info('Client received unexpected from %s %s',peer,pkt)
 
 CAClient.default=CAClient()

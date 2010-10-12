@@ -69,10 +69,10 @@ class Request(object):
 
 class Resolver(object):
     
-    def __init__(self, client=None, conf=Config()):
-        self.client=client
+    def __init__(self, tcpfactory=None, conf=Config.default):
+        self.tcpfactory=tcpfactory
 
-        self._udp=Port(0, UDPpeer(self._udp, 0))
+        self._udp=Port(0, UDPpeer(self._dataRx, 0))
         self._udp.startListening()
         self._udp.getHandle().setsockopt(socket.SOL_SOCKET,
                                     socket.SO_BROADCAST, 1)
@@ -81,6 +81,13 @@ class Resolver(object):
         # requests indexed by id and name
         self.reqID={}
         self.reqName={}
+
+        self.tcpReady=set()
+
+        if tcpfactory is not None:
+            for srv in conf.nameservs:
+                d=tcpfactory.requestCircuit(srv, persist=True)
+                d.addCallback(self.nameservReady)
 
         self.addrs=set()
         if conf.autoaddrs:
@@ -92,6 +99,16 @@ class Resolver(object):
 
         for addr in conf.addrs:
             self.addrs.add(addr)
+
+    def nameservReady(self, circ):
+        self.tcpReady.add(circ)
+        return circ
+
+    def _circuitLost(self, circ):
+        self.tcpReady.remote(circ)
+        # can only get here if tcpfactory is not None
+        d=self.tcpfactory.requestCircuit(srv, presist=True)
+        d.addCallback(nameservReady)
 
     def close(self):
         self._udp.stopListening()
@@ -131,9 +148,10 @@ class Resolver(object):
                 if e.errno!=EPERM:
                     raise
 
-        #TODO: TCP endpoints
+        for sock in self.tcpReady:
+            sock.send(req.msg)
 
-    def _udp(self, pkt, srv, _):
+    def _dataRx(self, pkt, srv, _):
         if pkt.cmd==0:
             pass
 
