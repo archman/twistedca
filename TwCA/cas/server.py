@@ -10,7 +10,7 @@ from twisted.internet.task import LoopingCall
 from twisted.internet.error import CannotListenError
 
 from TwCA.util.ca import CAmessage, packSearchBody
-from TwCA.util.udp import SharedUDP
+from TwCA.util.udp import SharedUDP, addr2int
 from TwCA.util.defs import *
 from TwCA.util.config import Config
 from TwCA.util.ifinspect import getifinfo
@@ -31,51 +31,48 @@ class Server(object):
         self.tcpfactory.protocol=CAcircuit
         self.tcpfactory.server=self
 
-        # fill server address
-        addrs=set()
-        if conf.srvautoaddrs:
-            for intr in getifinfo():
-                if intr in conf.srvignoreaddrs:
-                    continue
-                addrs.add(intr.addr)
-
-        for addr in conf.srvaddrs:
-            addrs.add(addr)
-
         # fill beacon address list
         self.becdests=set()
-        if conf.beaconautoaddrs:
-            for intr in getifinfo():
-                if intr.broadcast is None:
-                    continue
-                self.becdests.add(intr.broadcast)
 
-        for addr in conf.beaconaddrs:
-            self.becdests.add(addr)
+        for intr in getifinfo():
+            if not conf.srvautoaddrs and \
+                    (intr.addr not in conf.srvaddrs or \
+                     intr.addr in conf.srvignoreaddrs):
+                continue
 
 
-        for addr in addrs:
             try:
                 tp=reactor.listenTCP(self.sport,
                                     self.tcpfactory,
-                                    interface=addr)
+                                    interface=intr.addr)
             except CannotListenError:
                 # if the requested port is in use
                 # fall back to another
                 tp=reactor.listenTCP(0,
                                     self.tcpfactory,
-                                    interface=addr)
+                                    interface=intr.addr)
                 tcpport=tp.getHost().port
                 log.warning('Server running on non-standard port %d on %s',
-                            tcpport, addr)
+                            tcpport, intr.addr)
 
-            self.interfaces.append(tp)
+            bound=tp.getHost()
 
-        self.up=SharedUDP(conf.sport,
-                        UDPpeer(self.dispatchudp,self.sport),
-                        interface=addr,
-                        reactor=reactor)
-        self.up.startListening()
+            log.info('Server bind to %s',bound)
+
+            up=SharedUDP(conf.sport,
+                            UDPpeer(self.dispatchudp,bound.port),
+                            interface=bound.host,
+                            reactor=reactor)
+            up.startListening()
+
+            self.interfaces.append((tp,up))
+
+            if intr.broadcast is not None and \
+                    (conf.beaconautoaddrs or \
+                     intr.broadcast in conf.beaconaddrs):
+                log.debug('Beacons to %s',intr.broadcast)
+                self.becdests.add((intr.broadcast,bound,up))
+
 
         self._udp={0:self.ignore,6:self.nameres}
         self._tcp={6:self.nameres}
@@ -98,21 +95,23 @@ class Server(object):
         for c in copy(self.closeList):
             c()
 
-        self.up.stopListening()
-        for tp in self.interfaces:
+        for tp, up in self.interfaces:
+            up.stopListening()
             tp.stopListening()
 
     def sendBeacon(self):
-        b = CAmessage(cmd=13, dtype=self.sport, p1=self.beaconID).pack()
 
-        for intr in self.becdests:
+        for dest, srv, sock in self.becdests:
+            b = CAmessage(cmd=13, dtype=srv.port,
+                          p1=self.beaconID,
+                          p2=addr2int(srv.host)).pack()
 
             # Interface address will be added by receiving
             # CA repeater
             #b.p2=addr2int(host.host)
 
             try:
-                self.up.write(b, (intr, self.cport))
+                sock.write(b, (dest, self.cport))
             except socket.error, e:
                 #TODO: Why is this raising EINVAL for some bcast?
                 #print repr(b), (intr, self.cport)
