@@ -16,7 +16,7 @@ log=logging.getLogger('cas.endpoint')
 class CAcircuit(Protocol):
     
     def __init__(self):
-        self.server, self.peer=None, None
+        self.server=self.peer=self.tcpport=None
     
         self.prio, self.version=0, 11
 
@@ -132,6 +132,7 @@ class CAcircuit(Protocol):
     def connectionMade(self):
         self.server=self.factory.server
         self.peer=self.transport.getPeer()
+        self.tcpport=self.transport.getHost().port
         log.debug('connection from %s',self.peer)
         log.debug('Create %s',self)
 
