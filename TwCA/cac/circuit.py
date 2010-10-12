@@ -121,7 +121,7 @@ class CAClientcircuit(Protocol):
         # of closeList to change
         for m in [self.channels, self.subscriptions, self.pendingActions]:
             for c in m.itervalues():
-                c._circuitLost()
+                c._circuitLost(self)
             m.clear()
 
         log.debug('Destroy %s',self)

@@ -125,7 +125,7 @@ class CAClientChannel(object):
         d.addCallback(getCircuit)
         # lookups only fail when the client is shutting down
 
-    def _circuitLost(self):
+    def _circuitLost(self,_):
         log.debug('Channel %s lost circuit',self.name)
         if self._d:
             d, self._d = self._d, None

@@ -97,7 +97,7 @@ class CASet(object):
 
         return chan
 
-    def _circuitLost(self):
+    def _circuitLost(self,_):
         self.ioid=None
         if self.done:
             return

@@ -88,7 +88,7 @@ class CAMonitor(object):
 
         return chan
 
-    def _circuitLost(self):
+    def _circuitLost(self,_):
         if self.subid is None:
             return
         self.subid=None
