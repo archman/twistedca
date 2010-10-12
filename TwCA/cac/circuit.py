@@ -180,7 +180,7 @@ class CACircuitFactory(ClientFactory):
     def clientConnectionFailed(self, circ, _):
         assert circ.circDest in self.circuits
 
-        circ.circDeferred.errback()
+        circ.circDeferred.errback(RuntimeError('Circuit lost'))
 
         self.circuits.pop(circ.circDest)
 
