@@ -133,6 +133,12 @@ class CAcircuit(Protocol):
         self.server=self.factory.server
         self.peer=self.transport.getPeer()
         self.tcpport=self.transport.getHost().port
+
+        # before 3.14.12 servers didn't send version until client authenticated
+        # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
+        # but expect a version message immediately
+        pkt=CAmessage(cmd=0, dtype=self.prio, count=defs.CA_VERSION)
+        self.send(pkt.pack())
         log.debug('connection from %s',self.peer)
         log.debug('Create %s',self)
 
