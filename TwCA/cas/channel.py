@@ -49,7 +49,11 @@ class Channel(object):
     def readnotify(self, pkt, peer, circuit):
         log.debug('Read %s from %s',self.pv.name,peer)
         try:
-            pkt.count=min(pkt.count, self.pv.maxcount)
+            if pkt.count==0 and self.circuit.version>=13:
+                pkt.count=min(self.pv.count, self.pv.maxcount)
+            else:
+                pkt.count=min(pkt.count, self.pv.maxcount)
+
             data, count=self.pv.get(self, pkt.dtype, pkt.count)
 
             if count<pkt.count:
