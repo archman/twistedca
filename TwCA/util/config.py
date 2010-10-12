@@ -30,6 +30,7 @@ def _build_defaultconfig():
        'cport':CLIENT_PORT,
        'addrs':[('127.0.0.1',SERVER_PORT)], # client address list
        'autoaddrs':True,
+       'nameservs':[],
        'srvaddrs':[], 'srvignoreaddrs':[], 'srvautoaddrs':True,
        'beaconaddrs':['127.0.0.1'], 'beaconautoaddrs':True,
       }
