@@ -101,14 +101,18 @@ class Resolver(object):
             self.addrs.add(addr)
 
     def nameservReady(self, circ):
+        log.debug('Resolver TCP ready %s',circ)
         self.tcpReady.add(circ)
+        circ.transport.connector.circLost.addCallback(self._circuitLost)
         return circ
 
     def _circuitLost(self, circ):
-        self.tcpReady.remote(circ)
+        self.tcpReady.remove(circ)
         # can only get here if tcpfactory is not None
-        d=self.tcpfactory.requestCircuit(srv, presist=True)
-        d.addCallback(nameservReady)
+        d=self.tcpfactory.requestCircuit(circ.transport.connector.circDest, persist=True)
+        d.addCallback(self.nameservReady)
+        log.debug('Resolver waiting for %s',circ)
+        return circ
 
     def close(self):
         self._udp.stopListening()

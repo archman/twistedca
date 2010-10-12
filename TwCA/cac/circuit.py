@@ -115,6 +115,12 @@ class CAClientcircuit(Protocol):
         self.factory.circuitReady(self.transport.connector, self)
 
     def connectionLost(self, reason):
+        # Start a new deferred here so that
+        # it is available before sending circuitLost
+        # to allow clients to wait for reconnect
+        self.transport.connector.circDeferred=Deferred()
+        self.transport.connector.circLost.callback(self)
+
         self.client.dispatchtcp(None, self.peer, self)
         # make a copy of the list (not contents)
         # because calling _circuitLost() may cause the size
@@ -168,6 +174,7 @@ class CACircuitFactory(ClientFactory):
 
             circ=reactor.connectTCP(host, port, self, timeout=15)
             circ.circDeferred=Deferred()
+            circ.circLost=Deferred() # only used by persistent circuits
             circ.circDest=srv
             circ._persist=False
             circ._nextattempt=0.1
@@ -181,12 +188,14 @@ class CACircuitFactory(ClientFactory):
     def circuitReady(self, circ, proto):
         assert circ.circDest in self.circuits
 
+        circ.circLost=Deferred()
         circ.circDeferred.callback(proto)
 
     def clientConnectionFailed(self, circ, _):
         assert circ.circDest in self.circuits
 
         if not circ._persist:
+            d, circ.circDeferred = circ.circDeferred, Deferred()
             circ.circDeferred.errback(RuntimeError('Circuit lost'))
             self.circuits.pop(circ.circDest)
             return
@@ -203,6 +212,5 @@ class CACircuitFactory(ClientFactory):
         log.debug('Reconnect persistent circuit to %s',
                   circ.circDest)
         circ._nextattempt=0.1
-        circ.circDeferred=Deferred()
         circ.connect()
 
