@@ -177,12 +177,12 @@ def default():
 global ifinfo
 ifinfo=None
 
-def getifinfo(rebuild=True):
+def getifinfo(rebuild=False):
     global ifinfo
     if ifinfo is None or rebuild:
 
         try:
-            if sys.platform != 'WIN32':
+            if sys.platform not in ('win32'):
                 ifinfo=unix()
             else:
                 raise NotImplemented('Network interface '
