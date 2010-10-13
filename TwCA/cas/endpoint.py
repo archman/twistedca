@@ -57,7 +57,6 @@ class CAcircuit(Protocol):
     def caclient(self, pkt, x, y):
         self.user=pkt.body.strip('\0')
         log.debug('Update %s',self)
-        self.circuitReady()
 
     def cahost(self, pkt, x, y):
         self.host=pkt.body.strip('\0')
@@ -69,14 +68,6 @@ class CAcircuit(Protocol):
             self.host='<ANONYMOUS>'
             return
         log.debug('Update %s',self)
-        self.circuitReady()
-
-    def circuitReady(self):
-        if self.user is None or self.host is None:
-            return
-        log.debug('Circuit ready')
-        pkt=CAmessage(cmd=0, dtype=self.prio, count=defs.CA_VERSION)
-        self.send(pkt.pack())
 
     def createchan(self, pkt, x, y):
         # Older clients first report version here
