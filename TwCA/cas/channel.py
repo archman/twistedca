@@ -6,7 +6,7 @@ from TwCA.util.ca import CAmessage, padString, packCAerror, monitormask
 from TwCA.util.error import ECA_NORMAL, ECA_BADCHID
 from TwCA.util import error
 from TwCA.util.cadata import dbf_element_size
-from TwCA.util.defs import dbr_to_dbf
+from TwCA.util.defs import dbr_to_dbf, RIGHT
 
 log=logging.getLogger('cas.channel')
 
@@ -27,6 +27,8 @@ class Channel(object):
                     19:self.write}
 
         self.monitors={}
+
+        self.rights=pv.rights(self)
 
         # inform circuit
         self.circuit.closeList.add(self.close)
@@ -59,6 +61,9 @@ class Channel(object):
         """
         log.debug('Read %s from %s',self.pv.name,peer)
         try:
+            if not self.rights&RIGHT.READ:
+                raise CAError('Operation not permitted', error.ECA_NORDACCESS)
+
             if pkt.count==0 and self.circuit.version>=13:
                 pkt.count=min(self.pv.count, self.pv.maxcount)
             else:
@@ -95,6 +100,9 @@ class Channel(object):
         """
         log.debug('Write %s from %s',self.pv.name,peer)
         try:
+            if not self.rights&RIGHT.WRITE:
+                raise CAError('Operation not permitted', error.ECA_NOWTACCESS)
+
             self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
             
             if pkt.cmd==19:
@@ -115,6 +123,8 @@ class Channel(object):
     def monitoradd(self, pkt, peer, circuit):
         """Start a new monitor
         """
+        if not self.rights&RIGHT.READ:
+            raise CAError('Operation not permitted', error.ECA_NORDACCESS)
 
         if pkt.p2 in self.monitors:
             raise CAError('Attempt to use already existing monitor',ECA_BADCHID)

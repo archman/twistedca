@@ -90,7 +90,7 @@ class CAcircuit(Protocol):
         ok = CAmessage(cmd=18, dtype=dtype, count=maxcount,
                        p1=pkt.p1, p2=chan.sid)
 
-        rights = CAmessage(cmd=22, p1=pkt.p1, p2=pv.rights(chan))
+        rights = CAmessage(cmd=22, p1=pkt.p1, p2=chan.rights)
 
         self.send(ok.pack()+rights.pack())
         
