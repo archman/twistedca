@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
 
-"""
-Provides one function getifinfo which returns
-a list with information on each of the system
-network interfaces
-"""
-
 import sys, socket, logging, ctypes, array
-log=logging.getLogger('util.ifinspect')
+log=logging.getLogger('util.ifinspect.unix')
 from socket import inet_ntoa, inet_aton, htonl, htons
 from fcntl import ioctl
 
-from udp import int2addr
+from TwCA.util.ifinspect import interface
+from TwCA.util.udp import int2addr
 
-__all__=['getifinfo']
+__all__ = ['unix']
 
 if sys.version_info < (2, 6, 0):
     def str2struct(string, cstruct):
@@ -42,21 +37,6 @@ if sys.version_info < (2, 6, 0):
 else:
     def str2struct(string,cstruct):
         return cstruct.from_buffer_copy(buffer(string))
-
-
-class interface(object):
-    name=None
-    family=socket.AF_INET
-    addr=None
-    broadcast=None
-    loopback=None
-
-    def __str__(self):
-        info={}
-        info['lo']=' loopback' if self.loopback else ''
-        info['bcast']='bcast %s'%self.broadcast if self.broadcast else ''
-        info.update(self.__dict__)
-        return 'IF: %(name)s%(lo)s IPv4 %(addr)s %(bcast)s'%info
 
 def unix():
     
@@ -165,36 +145,3 @@ def unix():
             log.debug('Ignoring non IPv4 interface %s',intr.name)
 
     return iflist
-
-def default():
-    i=interface()
-    i.name='def'
-    i.addr='' # any address
-    i.broadcast='255.255.255.255'
-    i.loopback=False
-    return set([i])
-
-global ifinfo
-ifinfo=None
-
-def getifinfo(rebuild=False):
-    global ifinfo
-    if ifinfo is None or rebuild:
-
-        try:
-            if sys.platform not in ('win32'):
-                ifinfo=unix()
-            else:
-                raise NotImplemented('Network interface '
-                          'introspection not implemented')
-        except Exception,e:
-            log.error("network iface detection failed: "+str(e))
-            ifinfo=default()
-
-    return ifinfo
-
-if __name__=='__main__':
-    logging.basicConfig(format='%(message)s',level=logging.DEBUG)
-    iflist=getifinfo()
-    for intr in iflist:
-        print intr
