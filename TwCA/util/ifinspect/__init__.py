@@ -45,12 +45,13 @@ def getifinfo(rebuild=False):
     if ifinfo is None or rebuild:
 
         try:
-            if sys.platform not in ('win32'):
+            if sys.platform in ('win32'):
+                from win32 import win32
+                ifinfo=win32()
+            else:
                 from unix import unix
                 ifinfo=unix()
-            else:
-                raise NotImplemented('Network interface '
-                          'introspection not implemented')
+
         except Exception,e:
             log.error("network iface detection failed: "+str(e))
             ifinfo=default()
