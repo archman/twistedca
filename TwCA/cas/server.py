@@ -115,8 +115,7 @@ class Server(object):
             except socket.error, e:
                 #TODO: Why is this raising EINVAL for some bcast?
                 #print repr(b), (intr, self.cport)
-                if e.errno not in (EPERM, EINVAL, ENETUNREACH):
-                    raise
+                pass
 
         self.beaconID=self.beaconID+1
         if self.beaconWait<30:
