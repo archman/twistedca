@@ -20,11 +20,25 @@ from endpoint import UDPpeer, CAcircuit
 from struct import Struct
 
 class Server(object):
+    """Root server object.
+    
+    Listens on network interfaces, sends beacons,
+    and connects to PVs.
+    
+    The base implementation keeps a list of PVs,
+    but it is possible to replace the Lookup()
+    and GetPV() methods for different behavior.
+    """
     
     def __init__(self, conf=Config.default,
                  pvs=[], reactor=reactor):
+        """Create a new CA server.
+        
+        A Config instance is used to control which
+        network interfaces and ports are used.
+        """
         self.reactor=reactor
-        self.interfaces=[]
+        self.interfaces=[] # [(TCPEndpint, UDPPeer)]
         self.sport, self.cport=conf.sport, conf.cport
 
         self.tcpfactory=protocol.ServerFactory()
@@ -34,6 +48,8 @@ class Server(object):
         # fill beacon address list
         self.becdests=set()
 
+        # each interface gets a TCP port (sport or a random assignment)
+        # and a shared UDP port (always sport).
         for intr in getifinfo():
             if not conf.srvautoaddrs and \
                     (intr.addr not in conf.srvaddrs or \
@@ -59,6 +75,8 @@ class Server(object):
 
             log.info('Server bind to %s',bound)
 
+            # UDP port is given the port that the TCP listener
+            # is bound to.
             up=SharedUDP(conf.sport,
                             UDPpeer(self.dispatchudp,bound.port),
                             interface=bound.host,
@@ -67,6 +85,9 @@ class Server(object):
 
             self.interfaces.append((tp,up))
 
+            # broadcast on each capable interface giving
+            # the TCP port that its listener is using.
+            # TODO: this doesn't work for unicast.
             if intr.broadcast is not None and \
                     (conf.beaconautoaddrs or \
                      intr.broadcast in conf.beaconaddrs):
@@ -81,10 +102,10 @@ class Server(object):
         for pv in pvs:
             self.pvs[pv.name]=pv
         
-        self.closeList=set()
+        self.closeList=set() # actions to take when server is closed
 
         self.beaconID=0
-        self.beaconWait=0.02
+        self.beaconWait=0.02 # initial beacon period
         reactor.callLater(self.beaconWait,self.sendBeacon)
 
     def close(self):
@@ -97,18 +118,17 @@ class Server(object):
 
         for tp, up in self.interfaces:
             up.stopListening()
-            tp.stopListening()
+            tp.stopListening() # will cause active connections to close
 
     def sendBeacon(self):
 
         for dest, srv, sock in self.becdests:
+            # Note that broadcast beacons include to full address
+            # and do not depend on the repeater to determine them.
+            # TODO: Is this correct?  What about unicast.
             b = CAmessage(cmd=13, dtype=srv.port,
                           p1=self.beaconID,
                           p2=addr2int(srv.host)).pack()
-
-            # Interface address will be added by receiving
-            # CA repeater
-            #b.p2=addr2int(host.host)
 
             try:
                 sock.write(b, (dest, self.cport))
@@ -144,8 +164,13 @@ class Server(object):
         name=pkt.body.strip('\0')
         log.info('%s is looking for %s',str(peer),name)
         ret = self.Lookup(name)
-        if ret and not isinstance(ret, tuple):
+        if isinstance(ret, tuple) and pkt.count<11:
+            # redirect not supported by older clients
+            return
+
+        elif ret and not isinstance(ret, tuple):
             ret = (0xffffffff, endpoint.tcpport)
+
         if ret:
             ack=CAmessage(cmd=6, size=8, dtype=ret[1],
                           p1=ret[0], p2=pkt.p2,
@@ -155,10 +180,19 @@ class Server(object):
             
         
     def Lookup(self,name):
+        """Called in responce to name search requests.
+        
+        Can return either True/False, or a tuple of (ip, port).
+        The ip returned must be a 32-bit integer (host order).
+        """
         ret=name in self.pvs
         if ret:
             log.info('I have %s',name)
         return ret
 
     def GetPV(self,name):
+        """Called when a client trys to create a channel
+        
+        Return a PV instance or None.
+        """
         return self.pvs.get(name)

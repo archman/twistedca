@@ -11,6 +11,10 @@ from TwCA.util.defs import dbr_to_dbf
 log=logging.getLogger('cas.channel')
 
 class Channel(object):
+    """The association between a client and a PV.
+    
+    Instances are created by a server circuit
+    """
     
     def __init__(self, sid, cid, server, circuit, pv):
         self.server, self.circuit=server, circuit
@@ -32,6 +36,8 @@ class Channel(object):
         log.debug('Create %s',self)
 
     def close(self, connected=False):
+        """Called when the client closes the channel
+        """
         log.debug('Destroy %s',self)
         self.pv.disconnect(self)
         
@@ -43,10 +49,14 @@ class Channel(object):
         self.circuit.dropchan(self)
 
     def post(self, mask):
+        """Post all monitors associated with this channel
+        """
         for c in self.monitors.values():
             c.post(mask)
 
     def readnotify(self, pkt, peer, circuit):
+        """Client get
+        """
         log.debug('Read %s from %s',self.pv.name,peer)
         try:
             if pkt.count==0 and self.circuit.version>=13:
@@ -81,6 +91,8 @@ class Channel(object):
         self.circuit.send(raw)
 
     def write(self, pkt, peer, circuit):
+        """Client put
+        """
         log.debug('Write %s from %s',self.pv.name,peer)
         try:
             self.pv.set(self, pkt.body, pkt.dtype, pkt.count)
@@ -101,6 +113,8 @@ class Channel(object):
             self.circuit.send(pkt.pack())
 
     def monitoradd(self, pkt, peer, circuit):
+        """Start a new monitor
+        """
 
         if pkt.p2 in self.monitors:
             raise CAError('Attempt to use already existing monitor',ECA_BADCHID)
@@ -138,12 +152,19 @@ class Channel(object):
             {'sid':self.sid, 'peer':self.circuit.peer, 'pv':self.pv}
 
 class monitor(object):
+    """A request for notification on a channel.
+    """
     
     def __init__(self, channel, ioid, dbr, count, mask):
         self.channel, self.ioid = channel, ioid
         self.dbr, self.count, self.mask = dbr, count, mask
         
     def post(self, mask):
+        """Send monitor update if mask matches
+        
+        Data is read from the PV with the type meta-data
+        requested by the client
+        """
         if (self.mask&mask)==0:
             return
         try:
