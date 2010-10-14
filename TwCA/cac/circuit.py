@@ -14,6 +14,8 @@ from TwCA.util.idman import IDManager
 log=logging.getLogger('cac.circuit')
 
 class CAClientcircuit(Protocol):
+    """Protocol for speaking to a CA server
+    """
 
     def __init__(self):
         self.client, self.peer=None, None
@@ -39,6 +41,8 @@ class CAClientcircuit(Protocol):
 
 
     def addchan(self, channel):
+        """Add a channel to this circuit
+        """
         assert channel not in self.channels
         
         channel.cid=self.channels.add(channel)
@@ -51,6 +55,8 @@ class CAClientcircuit(Protocol):
         self.transport.write(msg)
     
     def dropchan(self, channel):
+        """Remove a channel from this circuit
+        """
         assert channel in self.channels
 
         self.channels.pop(channel.cid)
@@ -154,6 +160,10 @@ class CAClientcircuit(Protocol):
             self.__dict__
 
 class CACircuitFactory(ClientFactory):
+    """Handles circuit life cycle
+    
+    Maintains a list of open circuits to avoid duplication.
+    """
     
     protocol = CAClientcircuit
 
@@ -167,6 +177,11 @@ class CACircuitFactory(ClientFactory):
             c.disconnect()
 
     def requestCircuit(self, srv, persist=None):
+        """Request a new circuit to a CA server.
+        
+        srv: tuple (host ip, port)
+        persist: Make circuit persistent (auto re-connect)
+        """
         circ=self.circuits.get(srv)
         if circ is None:
 

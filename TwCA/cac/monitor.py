@@ -17,10 +17,25 @@ from client import CAClientShutdown
 
 
 class CAMonitor(object):
+    """A recurring data request
+    """
     
     def __init__(self, channel, dbf=None, count=None,
                  meta=META.PLAIN, dbf_conv=None,
                  mask=DBE.VALUE):
+        """Start a new request.
+        
+        channel: PV name
+        dbf: Field type requested from server
+        count: length requested from server
+        meta: Meta-data class requested
+        dbf_conv: Additional client side conversion
+                  before data is returned to user.
+        mask: DBE event mask which will trigger updates
+
+        Note: Server will never return more then count
+              elements, but may return less.
+        """
         self._chan, self.dbf = channel, dbf
         self._meta, self.count = meta, count
         self.mask,  self.dbf_conv = mask, dbf_conv
@@ -34,14 +49,26 @@ class CAMonitor(object):
         else:
             self.meta=None
 
-        self.updates=CBManager()
+        self._updates=CBManager()
 
         self._chan._ctxt.closeList.add(self.close)
 
         d=self._chan._eventCon
         d.addCallback(self._chanOk)
 
+    @property
+    def updates(self):
+        """A callback manager for data updates
+        
+        An instance of CBManager.
+        
+        Callback called with ((values,meta), mask, status)
+        """
+        return self._updates
+
     def close(self):
+        """Cancel request
+        """
         if self.subid is None:
             return
 
@@ -58,7 +85,7 @@ class CAMonitor(object):
 
         self._chan._ctxt.closeList.remove(self.close)
 
-        self.updates(None, 0, ECA_DISCONN)
+        self._updates(None, 0, ECA_DISCONN)
 
     def _chanOk(self, chan):
         assert self._chan is chan
@@ -93,7 +120,7 @@ class CAMonitor(object):
             return
         self.subid=None
 
-        self.updates(None, 0, ECA_DISCONN)
+        self._updates(None, 0, ECA_DISCONN)
 
         d=self._chan._eventCon
         d.addCallback(self._chanOk)
@@ -112,7 +139,7 @@ class CAMonitor(object):
 
         data = fromstring(pkt.body, pkt.dtype, pkt.count, meta)
 
-        self.updates(data, self.mask, pkt.p1)
+        self._updates(data, self.mask, pkt.p1)
 
     def __str__(self):
         cnt='Native' if self.count is None else self.count

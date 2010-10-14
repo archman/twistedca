@@ -15,11 +15,23 @@ from client import CAClientShutdown
 
 
 class CASet(object):
+    """Write to a PV
+    """
     
     def __init__(self, channel, data,
                  dbf=None,
                  meta=META.PLAIN, dbf_conv=None,
                  wait=False):
+        """Start a new write request
+        
+        channel: PV name
+        data: value array
+        dbf: Field type to write
+        meta: Meta data class to send
+        dbf_conv: Treat value array as different field type.
+                  Does a client-side conversion
+        wait: Request notification on completion
+        """
         self._chan, self.dbf      = channel, dbf
         self._data, self.dbf_conv = data,    dbf_conv
         self._meta, self._wait    = meta,    wait
@@ -39,13 +51,23 @@ class CASet(object):
 
     @property
     def complete(self):
+        """A Deferred called when the write has finished.
+        
+        This is either when the request is sent, or when
+        confirmation is received depending on the type of
+        write.
+        """
         return self._comp
 
     def close(self):
+        """Cancel the request
+        """
         if not self.done and self._comp:
             self._comp.errback(CAClientShutdown('Set aborted'))
 
     def restart(self, data):
+        """Resend with new value array
+        """
         if not self.done:
             raise RuntimeError('Previous Set not complete')
         self._data=data

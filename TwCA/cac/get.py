@@ -14,9 +14,23 @@ from client import CAClientShutdown
 
 
 class CAGet(object):
+    """A non-recuring request for data
+    """
     
     def __init__(self, channel, dbf=None, count=None,
                  meta=META.PLAIN, dbf_conv=None):
+        """Start a new request.
+        
+        channel: PV name
+        dbf: Field type requested from server
+        count: length requested from server
+        meta: Meta-data class requested
+        dbf_conv: Additional client side conversion
+                  before data is returned to user.
+
+        Note: Server will never return more then count
+              elements, but may return less.
+        """
         self._chan, self.dbf = channel, dbf
         self._meta, self.count = meta, count
         self.dbf_conv=dbf_conv
@@ -35,10 +49,18 @@ class CAGet(object):
         self.restart()
 
     def close(self):
+        """Cancel request
+        """
         if not self.done:
             self._result.errback(CAClientShutdown('Get aborted'))
 
     def restart(self):
+        """Restart request
+        
+        Send a new request to the server.
+        
+        Note: A no-op if a request is currently in progress.
+        """
         if not self.done:
             return
 
@@ -51,6 +73,10 @@ class CAGet(object):
 
     @property
     def data(self):
+        """A Deferred which will be called with the result
+        
+        Will be called with a tuple (value array, caMeta)
+        """
         return self._result
 
     def _chanOk(self, chan):

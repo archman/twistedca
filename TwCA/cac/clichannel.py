@@ -9,6 +9,10 @@ from twisted.internet.defer import Deferred, succeed, fail
 from client import CAClient
 
 class CAClientChannel(object):
+    """Persistent Client Channel
+    
+    Handles lookups and (re)connection.
+    """
     S_init='Disconnected'
     S_lookup='PV lookup'
     S_waitcirc='Waiting for circuit'
@@ -16,6 +20,11 @@ class CAClientChannel(object):
     
     def __init__(self, name, connectCB=None,
                  context=CAClient.default):
+        """Create a new channel to the named PV.
+        
+        Note: This will _always_ start a new channel even
+        if one already exists.
+        """
         self.name=name
         self._conCB, self._ctxt=connectCB, context
         self._eventDis=succeed(self)
@@ -34,6 +43,10 @@ class CAClientChannel(object):
         self._reset()
 
     def close(self):
+        """Close the channel.
+
+        This will fail any pending actions
+        """
         if self._eventDis is None:
             # shutdown already happened
             return
@@ -68,6 +81,8 @@ class CAClientChannel(object):
 
     @property
     def connected(self):
+        """Test if the channel is currently connected
+        """
         return self._connected
 
     def _connect(self):
