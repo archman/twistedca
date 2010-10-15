@@ -3,22 +3,31 @@
 import socket, logging
 from copy import copy
 
+from zope.interface import implements
+
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, ClientFactory
-from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.tcp import Connector
 
 from TwCA.util.ca import CAmessage, padString
 from TwCA.util import defs
 from TwCA.util.idman import IDManager
+from TwCA.util.twistedhelper import DeferredConnector
+
+from interfaces import IClientcircuit
 
 log=logging.getLogger('cac.circuit')
 
 class CAClientcircuit(Protocol):
     """Protocol for speaking to a CA server
     """
+    
+    implements(IClientcircuit)
 
-    def __init__(self):
-        self.client, self.peer=None, None
+    def __init__(self, client):
+        self.peer=None
+        self.client=client
     
         self.prio, self.version=0, 11
         
@@ -71,22 +80,22 @@ class CAClientcircuit(Protocol):
 
     # CA actions
 
-    def caver(self, pkt, x, y):
+    def caver(self, pkt, _):
         self.version=min(defs.CA_VERSION, pkt.count)
         self.prio=pkt.dtype
         log.debug('Version %s',self)
 
-    def ping(self, pkt, x, y):
+    def ping(self, pkt, _):
         self.send(pkt.pack())
 
-    def forwardCID(self, pkt, peer, circuit):
+    def forwardCID(self, pkt, circuit):
         chan=self.channels.get(pkt.p1)
         if chan is None:
             log.warning('Attempt to access non-existent CID %d',pkt.p1)
             return
-        chan.dispatch(pkt, peer, circuit)
+        chan.dispatch(pkt, circuit)
 
-    def forwardIOID(self, pkt, peer, circuit):
+    def forwardIOID(self, pkt, circuit):
 
         act=self.pendingActions.pop(pkt.p2, None)
         if act is None:
@@ -94,18 +103,17 @@ class CAClientcircuit(Protocol):
             return
         act.dispatch(pkt, peer, circuit)
 
-    def forwardSubID(self, pkt, peer, circuit):
+    def forwardSubID(self, pkt, circuit):
 
         act=self.subscriptions.get(pkt.p2, None)
         if act is None:
             log.warning('Reply for non-existent subscription %d',pkt.p2)
             return
-        act.dispatch(pkt, peer, circuit)
+        act.dispatch(pkt, circuit)
 
     # socket operations
 
     def connectionMade(self):
-        self.client=self.factory.client
         self.peer=self.transport.getPeer()
         log.debug('Open %s',self)
         
@@ -118,24 +126,11 @@ class CAClientcircuit(Protocol):
         
         self.transport.write(msg)
         
-        self.factory.circuitReady(self.transport.connector, self)
+        if hasattr(self.transport.connector, 'connectionMade'):
+            # the testing transports have no connector
+            self.transport.connector.connectionMade()
 
     def connectionLost(self, reason):
-        # Start a new deferred here so that
-        # it is available before sending circuitLost
-        # to allow clients to wait for reconnect
-        self.transport.connector.circDeferred=Deferred()
-        self.transport.connector.circLost.callback(self)
-
-        self.client.dispatchtcp(None, self.peer, self)
-        # make a copy of the list (not contents)
-        # because calling _circuitLost() may cause the size
-        # of closeList to change
-        for m in [self.channels, self.subscriptions, self.pendingActions]:
-            for c in m.itervalues():
-                c._circuitLost(self)
-            m.clear()
-
         log.debug('Destroy %s',self)
 
     def send(self, msg):
@@ -149,9 +144,9 @@ class CAClientcircuit(Protocol):
         
             pkt, msg = CAmessage.unpack(msg)
             
-            hdl = self._circ.get(pkt.cmd, self.client.dispatchtcp)
+            hdl = self._circ.get(pkt.cmd, self.client.dispatch)
         
-            hdl(pkt, self.peer, self)
+            hdl(pkt, self)
 
         self.in_buffer=msg # save remaining
 
@@ -175,47 +170,50 @@ class CACircuitFactory(ClientFactory):
         for c in copy(self.circuits.values()):
             c._persist=False
             c.disconnect()
+        self.circuits=None
+
+    def buildProtocol(self,_):
+        return CAClientcircuit(self.client)
 
     def requestCircuit(self, srv, persist=None):
         """Request a new circuit to a CA server.
         
         srv: tuple (host ip, port)
         persist: Make circuit persistent (auto re-connect)
+        
+        Returns a tuple which is called with either an
+        instance of CAClientcircuit or None if the server
+        could not be contacted.
         """
+        if self.circuits is None:
+            return succeed(None)
+
         circ=self.circuits.get(srv)
         if circ is None:
 
             host, port = srv
 
-            circ=reactor.connectTCP(host, port, self, timeout=15)
-            circ.circDeferred=Deferred()
-            circ.circLost=Deferred() # only used by persistent circuits
+            circ=DeferredConnector(host, port, self, timeout=10,
+                                   reactor=self.client.reactor)
+            circ.connect()
             circ.circDest=srv
             circ._persist=False
-            circ._nextattempt=0.1
+            circ._nextattempt=0.5
             self.circuits[srv]=circ
 
         if persist is not None:
             circ._persist=persist
 
-        return circ.circDeferred
-
-    def circuitReady(self, circ, proto):
-        assert circ.circDest in self.circuits
-
-        circ.circLost=Deferred()
-        circ.circDeferred.callback(proto)
+        return circ.whenCon
 
     def clientConnectionFailed(self, circ, _):
         assert circ.circDest in self.circuits
 
         if not circ._persist:
-            d, circ.circDeferred = circ.circDeferred, Deferred()
-            circ.circDeferred.errback(RuntimeError('Circuit lost'))
             self.circuits.pop(circ.circDest)
-            return
-
-        reactor.callLater(circ._nextattempt, circ.connect)
+        else:
+            reactor.callLater(circ._nextattempt, circ.connect)
+            circ._nextattempt=min(2*circ._nextattempt,20)
 
     def clientConnectionLost(self, circ, _):
         assert circ.circDest in self.circuits
@@ -226,6 +224,6 @@ class CACircuitFactory(ClientFactory):
 
         log.debug('Reconnect persistent circuit to %s',
                   circ.circDest)
-        circ._nextattempt=0.1
+        circ._nextattempt=0.5
         circ.connect()
 

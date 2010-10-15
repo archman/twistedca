@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+
+import logging
+log=logging.getLogger('util.twisted')
+
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.tcp import Connector
+from twisted.internet.protocol import Protocol, DatagramProtocol
+
+from TwCA.util.ca import CAmessage
+
+class DeferredConnector(Connector):
+    """Provides Deferred s for connection life cycle
+    
+    Provides a three state machine.
+    
+        /------------->---------------\
+    connected <- connecting <-> disconnected -> shutdown
+    
+    The shutdown state is signalled when the connected Deferred()
+    is called with None.  The disconnected Deferred() will always
+    have been called before.
+    
+    When in the shutdown state both Deferred()s have been called.
+    
+    Initial (disconnect): D fired, C ready
+    connect         : fire D, arm C    [implicit]
+    connectionMade  : arm  D, fire C
+    connectionFailed: fire D, fire C (None)
+    connectionLost  : fire D, arm C
+    """
+    
+    def __init__(self, *args, **kws):
+        Connector.__init__(self, *args, **kws)
+        
+        self.__C=Deferred()
+        self.__D=succeed(None)
+
+    @property
+    def whenCon(self):
+        return self.__C
+
+    @property
+    def whenDis(self):
+        return self.__D
+
+    def connectionFailed(self, _):
+        """connecting -> disconnected
+        """
+        self.__C, C = Deferred(), self.__C
+        C.callback(None)
+        # now C armed, D fired
+
+        Connector.connectionFailed(self, res)
+
+    def connectionMade(self):
+        """connecting -> connected
+        """
+        # save protocol since it is cleared from the
+        # transport before connectionLost() is called
+        self.__protocol=self.transport.protocol
+        self.__D=Deferred()
+        self.__C.callback(self.__protocol)
+        # now C fired, D armed
+
+    def connectionLost(self, _):
+        """connected -> disconnected
+        """
+        self.__C=Deferred()
+        self.__D, D = Deferred(), self.__D
+        D.callback(self.__protocol)
+        del self.__protocol
+        # now C armed, D fired
+
+        Connector.connectionLost(self, res)
+
+class CAProtocol(Protocol):
+
+    def _unknown_action(self, pkt, _):
+        log.warning('Unknown TCP packet %d',pkt.cmd)
+
+    def dataReceived(self, msg):
+
+        msg=self.__in_buffer+msg
+
+        while msg is not None and len(msg)>=16:
+        
+            pkt, msg = CAmessage.unpack(msg)
+            
+            hdl = self._dispatch_table.get(pkt.cmd, self._dispatch_default)
+        
+            hdl(pkt, self)
+
+        self.__in_buffer=msg # save remaining
+
+    _dispatch_table=None
+    _dispatch_default=_unknown_action
+    __in_buffer=''
+
+class CADatagramProtocol(DatagramProtocol):
+
+    def _unknown_action(self, pkt, _):
+        log.warning('Unknown UDP packet %d',pkt.cmd)
+
+    def datagramReceived(self, msg, peer):
+        
+        while msg is not None and len(msg)>=16:
+
+            pkt, msg = CAmessage.unpack(msg)
+
+            hdl = self._dispatch_table.get(pkt.cmd, self._dispatch_default)
+
+            hdl(pkt, self, peer)
+
+        if len(msg)>0:
+            log.warning('dropping incomplete message %s',repr(msg))
+
+    _dispatch_table=None
+    _dispatch_default=_unknown_action
