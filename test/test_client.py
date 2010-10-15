@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
+from twisted.internet import reactor
+from twisted.internet.defer import gatherResults
 from twisted.trial import unittest
 from twisted.protocols.loopback import loopbackTCP
 
 from TwCA.util.config import Config
-from TwCA.util.ca import CAmessage, padString
-from TwCA.util.twistedhelper import CAProtocol
+from TwCA.util.ca import CAmessage, padString, searchbody
+from TwCA.util.twistedhelper import CAExpectProtocol, CAExpectDatagramProtocol
 from TwCA.util.defs import CA_VERSION
 
 from TwCA.cac.circuit import CAClientcircuit, CACircuitFactory
-#from TwCA.cac.resolver
+from TwCA.cac.resolver import Resolver
 #from TwCA.cac.client import CAClient
 
 testconfig=Config()
@@ -19,50 +21,6 @@ testconfig.cport=55065
 testconfig.addrs=[('127.0.0.1',testconfig.sport)]
 testconfig.autoaddrs=False
 testconfig.nameservs=[]
-
-class TestServerCircuit(CAProtocol):
-    
-    def __init__(self, tst, v13=False):
-        self.tst, self.v13=tst, v13
-        user=padString('hello')
-        host=padString('world')
-
-        self.needed=set([0,20,21])
-        self._dispatch_table={
-             0:self.expect(CAmessage(dtype=0, count=CA_VERSION)),
-            20:self.expect(CAmessage(cmd=20, size=len(user), body=user)),
-            21:self.expect(CAmessage(cmd=21, size=len(host), body=host)),
-            }
-
-        if v13:
-            self.next=lambda:None
-        else:
-            self.next=self.sendVersion
-
-    def connectionMade(self):
-        if self.v13:
-            self.sendVersion()
-
-    def expect(self, epkt):
-        
-        def inspector(pkt, _):
-            self.tst.assertEqual(pkt.cmd,  epkt.cmd)
-            self.tst.assertEqual(pkt.size, epkt.size)
-            self.tst.assertEqual(pkt.dtype,epkt.dtype)
-            self.tst.assertEqual(pkt.count,epkt.count)
-            self.tst.assertEqual(pkt.p1,   epkt.p1)
-            self.tst.assertEqual(pkt.p2,   epkt.p2)
-            self.tst.assertEqual(pkt.body ,epkt.body)
-            self.needed.remove(pkt.cmd)
-            if len(self.needed)==0:
-                self.next()
-        return inspector
-
-    def sendVersion(self):
-        if self.v13:
-            self.tst.assertTrue(len(self.needed),3)
-        msg=CAmessage(dtype=0, count=11).pack()
-        self.transport.write(msg)
 
 class TestCircuit(unittest.TestCase):
     
@@ -87,14 +45,25 @@ class TestCircuit(unittest.TestCase):
         """
         client=self.StubClient()
         
-        serv=TestServerCircuit(self, False)
+        user=padString('hello')
+        host=padString('world')
+
+        program= \
+            [('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=20, size=len(user), body=user)),
+             ('recv',CAmessage(cmd=21, size=len(host), body=host)),
+             ('send',CAmessage(dtype=0, count=11)),
+            ]
+        
+        serv=CAExpectProtocol(self, program, halt=False)
         cli =self._CAClientcircuit(client)
 
         d=loopbackTCP(serv, cli, noisy=True)
         @d.addCallback
-        def postConditions(result):
-            self.assertEqual(len(serv.needed),0)
-            return result
+        def postCondition(value):
+            self.assertEqual(len(serv.program),0)
+            self.assertEqual(cli.version,11)
+            return value
 
         return d
 
@@ -106,18 +75,74 @@ class TestCircuit(unittest.TestCase):
         """
         client=self.StubClient()
         
-        serv=TestServerCircuit(self, True)
+        user=padString('hello')
+        host=padString('world')
+
+        program= \
+            [('send',CAmessage(dtype=0, count=13)),
+             ('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=20, size=len(user), body=user)),
+             ('recv',CAmessage(cmd=21, size=len(host), body=host)),
+            ]
+        
+        serv=CAExpectProtocol(self, program, halt=False)
         cli =self._CAClientcircuit(client)
 
         d=loopbackTCP(serv, cli, noisy=True)
         @d.addCallback
-        def postConditions(result):
-            self.assertEqual(len(serv.needed),0)
-            return result
+        def postCondition(value):
+            self.assertEqual(len(serv.program),0)
+            self.assertEqual(cli.version,13)
+            return value
 
         return d
 
-class TestClient(unittest.TestCase):
+class TestResolver(unittest.TestCase):
     
-    def test_noop(self):
-        pass
+    def test_udplookup(self):
+        name=padString('test1')
+
+        serv=CAExpectDatagramProtocol(self, [], halt=False)
+
+        up=reactor.listenUDP(0, serv, interface='127.0.0.1')
+
+        addr=up.getHost()
+        addr=addr.host, addr.port
+
+        conf=Config(Config.empty)
+        conf.addrs=[addr]
+        
+        resolv=Resolver(conf=conf)
+
+        serv.dest='127.0.0.1', resolv._udp.getHost().port
+
+        # name search
+        # respond after second request
+        serv.program= \
+            [('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=6, size=len(name),
+                               dtype=5, count=CA_VERSION,
+                               p1=0, p2=0, body=name)),
+             ('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=6, size=len(name),
+                               dtype=5, count=CA_VERSION,
+                               p1=0, p2=0, body=name)),
+             ('send',CAmessage(cmd=6, size=8, dtype=addr[1],
+                               p1=0xffffffff, p2=0,
+                               body=searchbody.pack(11))),
+            ]
+        
+
+        d=resolv.lookup('test1')
+
+        @d.addCallback
+        def result(srv):
+            self.assertEqual(srv, addr)
+            
+            self.assertEqual(len(serv.program),0)
+
+            d1=up.stopListening()
+            d2=resolv.close()
+            return gatherResults([d1,d2])
+
+        return d

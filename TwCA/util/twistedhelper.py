@@ -117,3 +117,55 @@ class CADatagramProtocol(DatagramProtocol):
 
     _dispatch_table=None
     _dispatch_default=_unknown_action
+
+class CAExpectMixen(object):
+    noisy=False
+    
+    def __init__(self, tst, program, halt=True):
+        self.tst, self.program=tst, program
+        self.halt=halt
+        
+        self._dispatch_table={}
+        
+        self.dest=None
+
+        self._dispatch_default=self.expect
+
+    def expect(self, pkt, x, y=None):
+        cmd, epkt = self.program.pop(0)
+        self.tst.assertEqual(cmd, 'recv')
+        
+        self.tst.assertEqual(pkt.cmd,  epkt.cmd)
+        self.tst.assertEqual(pkt.size, epkt.size)
+        self.tst.assertEqual(pkt.dtype,epkt.dtype)
+        self.tst.assertEqual(pkt.count,epkt.count)
+        self.tst.assertEqual(pkt.p1,   epkt.p1)
+        self.tst.assertEqual(pkt.p2,   epkt.p2)
+        self.tst.assertEqual(pkt.body ,epkt.body)
+        
+        self.send()
+
+    def send(self):
+        
+        while len(self.program)>0 and self.program[0][0]=='send':
+            cmd, epkt = self.program.pop(0)
+
+            if self.dest is None:
+                self.transport.write(epkt.pack())
+            else:
+                self.transport.write(epkt.pack(), self.dest)
+
+        if len(self.program)==0 and self.halt:
+            self.transport.loseConnection()
+
+
+class CAExpectProtocol(CAProtocol,CAExpectMixen):
+
+    def connectionMade(self):
+        self.send()
+
+
+class CAExpectDatagramProtocol(CADatagramProtocol,CAExpectMixen):
+
+    def startProtocol(self):
+        self.send()

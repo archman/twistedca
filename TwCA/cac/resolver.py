@@ -16,9 +16,6 @@ from TwCA.util.config import Config
 from TwCA.util.ca import CAmessage, searchbody, padString
 from TwCA.util.ifinspect import getifinfo
 from TwCA.cas.endpoint import UDPpeer
-    
-class Cancelled(Exception):
-    pass
 
 class Request(object):
     
@@ -49,23 +46,20 @@ class Request(object):
         if self.T is not None:
             self.T.cancel()
             self.T=None
-        self.d.callback(srv)
+            self.d.callback(srv)
 
     def cancel(self):
-        if self.T is not None:
-            self.T.cancel()
-            self.T=None
+        if self.T is None:
+            return
+            
+        self.T.cancel()
+        self.T=None
 
         # once the manager is informed future requests
         # for this name will result in a new request
         self.manager._cancel(self)
 
-        # The cancel will propogate through all handlers
-        # so we must catch it at the end to avoid
-        # an 'Unhandled error in Deferred:' warning
-        self.d.addErrback(lambda x:x.trap(Cancelled))
-
-        self.d.errback(Cancelled('Request cancelled'))
+        self.d.callback(None)
 
 class Resolver(object):
     
@@ -115,7 +109,8 @@ class Resolver(object):
         return circ
 
     def close(self):
-        self._udp.stopListening()
+        self.nextID=None
+        d=self._udp.stopListening()
 
         # req.cancel() will modify reqID
         for req in copy(self.reqID.values()):
@@ -124,7 +119,12 @@ class Resolver(object):
         assert len(self.reqID)==0
         assert len(self.reqName)==0
 
+        return d
+
     def lookup(self, name):
+        if self.nextID is None:
+            return succeed(None)
+
         req=self.reqName.get(name)
         
         if req is None:
@@ -182,7 +182,7 @@ class Resolver(object):
         else:
             log.warning('Name receiver ignored unexpected msg %u',pkt.cmd)
 
-def test():
+if __name__=='__main__':
     logging.basicConfig(format='%(message)s',level=logging.DEBUG)
     
     r=Resolver()
@@ -201,6 +201,3 @@ def test():
     start('test2')
 
     reactor.run()
-
-if __name__=='__main__':
-    test()

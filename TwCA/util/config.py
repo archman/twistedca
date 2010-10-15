@@ -23,18 +23,29 @@ class Config(object):
         return a
 
 # The default configuration
-Config.default=Config(next=None)
+Config.empty=Config(next=None)
+Config.default=Config(next=Config.empty)
 
 def _build_defaultconfig():
-    c={'sport':SERVER_PORT,
-       'cport':CLIENT_PORT,
-       'addrs':[('127.0.0.1',SERVER_PORT)], # client address list
-       'autoaddrs':True,
+    c={'sport':0,
+       'cport':0,
+       'addrs':[], # client address list
+       'autoaddrs':False,
        'nameservs':[],
-       'srvaddrs':[], 'srvignoreaddrs':[], 'srvautoaddrs':True,
-       'beaconaddrs':['127.0.0.1'], 'beaconautoaddrs':True,
+       'srvaddrs':[], 'srvignoreaddrs':[], 'srvautoaddrs':False,
+       'beaconaddrs':[], 'beaconautoaddrs':False,
       }
+    Config.empty._props=c # empty config for unit tests
     
-    Config.default._props=c
+    Config.default=Config(Config.empty)
+
+    Config.default.sport=SERVER_PORT
+    Config.default.cport=CLIENT_PORT
+    Config.default.addrs=[('127.0.0.1',SERVER_PORT)]
+    Config.default.autoaddrs=True
+    #Config.default.nameservs=[]
+    Config.default.srvautoaddrs=True
+    Config.default.beaconaddrs=['127.0.0.1']
+    Config.default.beaconautoaddrs=True
 
 _build_defaultconfig()
