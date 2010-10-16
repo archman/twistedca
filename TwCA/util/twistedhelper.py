@@ -63,7 +63,7 @@ class DeferredConnector(Connector):
         self.__C.callback(self.__protocol)
         # now C fired, D armed
 
-    def connectionLost(self, _):
+    def connectionLost(self, res):
         """connected -> disconnected
         """
         self.__C=Deferred()
@@ -157,7 +157,6 @@ class CAExpectMixen(object):
 
         if len(self.program)==0 and self.halt:
             self.transport.loseConnection()
-
 
 class CAExpectProtocol(CAProtocol,CAExpectMixen):
 

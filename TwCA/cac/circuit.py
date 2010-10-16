@@ -170,7 +170,7 @@ class CACircuitFactory(ClientFactory):
         for c in copy(self.circuits.values()):
             c._persist=False
             c.disconnect()
-        self.circuits=None
+        self.client=None
 
     def buildProtocol(self,_):
         return CAClientcircuit(self.client)
@@ -185,7 +185,7 @@ class CACircuitFactory(ClientFactory):
         instance of CAClientcircuit or None if the server
         could not be contacted.
         """
-        if self.circuits is None:
+        if self.client is None:
             return succeed(None)
 
         circ=self.circuits.get(srv)
@@ -194,6 +194,7 @@ class CACircuitFactory(ClientFactory):
             host, port = srv
 
             circ=DeferredConnector(host, port, self, timeout=10,
+                                   bindAddress=None,
                                    reactor=self.client.reactor)
             circ.connect()
             circ.circDest=srv

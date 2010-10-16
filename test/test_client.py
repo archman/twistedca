@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from twisted.internet import reactor
+
+#from twisted.internet.base import DelayedCall
+#DelayedCall.debug=True
+
 from twisted.internet.defer import gatherResults
 from twisted.trial import unittest
+from twisted.internet.protocol import ServerFactory
 from twisted.protocols.loopback import loopbackTCP
 
 from TwCA.util.config import Config
@@ -21,16 +26,17 @@ testconfig.cport=55065
 testconfig.addrs=[('127.0.0.1',testconfig.sport)]
 testconfig.autoaddrs=False
 testconfig.nameservs=[]
+    
+class StubClient:
+    user='hello'
+    host='world'
+    reactor=reactor
+    def dispatch(self, pkt, _):
+        self.fail('Unexpected package %s',pkt)
 
 class TestCircuit(unittest.TestCase):
     
     timeout=1
-    
-    class StubClient:
-        user='hello'
-        host='world'
-        def dispatch(self, pkt, _):
-            self.fail('Unexpected package %s',pkt)
         
     class _CAClientcircuit(CAClientcircuit):
         # stop after version received
@@ -43,7 +49,7 @@ class TestCircuit(unittest.TestCase):
         
         Server sends version after authentication
         """
-        client=self.StubClient()
+        client=StubClient()
         
         user=padString('hello')
         host=padString('world')
@@ -73,7 +79,7 @@ class TestCircuit(unittest.TestCase):
         Server sends version on connection
         to facilitate name server on TCP
         """
-        client=self.StubClient()
+        client=StubClient()
         
         user=padString('hello')
         host=padString('world')
@@ -94,6 +100,70 @@ class TestCircuit(unittest.TestCase):
             self.assertEqual(len(serv.program),0)
             self.assertEqual(cli.version,13)
             return value
+
+        return d
+
+
+class TestCircuitFactory(unittest.TestCase):
+    
+    class CAExpectFactory(ServerFactory):
+        protocol=CAExpectProtocol
+        tst=None
+        program=None
+        halt=False
+        
+        def buildProtocol(self, _):
+            return self.protocol(self.tst, self.program, self.halt)
+    
+    def test_connect(self):
+        client=StubClient()
+        
+        user=padString('hello')
+        host=padString('world')
+        
+        sfact=self.CAExpectFactory()
+        sfact.tst=self
+        sfact.program = \
+            [('send',CAmessage(dtype=0, count=13)),
+             ('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=20, size=len(user), body=user)),
+             ('recv',CAmessage(cmd=21, size=len(host), body=host)),
+            ]
+            
+        serv=reactor.listenTCP(0, sfact, interface='127.0.0.1')
+        
+        cfact=CACircuitFactory(client)
+        
+        d=cfact.requestCircuit(('127.0.0.1', serv.getHost().port))
+        
+        @d.addCallback
+        def onConnect(circ):
+            self.assertIsInstance(circ, CAClientcircuit)
+
+            d2=circ.transport.connector.whenDis
+            
+            circ.transport.loseConnection()
+            
+            d3=circ.transport.connector.whenDis
+            
+            self.assertTrue(d2 is d3)
+
+            return d3
+        
+        @d.addCallback
+        def onDisconnect(circ):
+            self.assertTrue(isinstance(circ, CAClientcircuit))
+            
+            cfact.close()
+            d4=serv.loseConnection()
+            
+            return d4
+
+        @d.addErrback
+        def onFail(fail):
+            print '>>> Error'
+            print fail
+            return fail
 
         return d
 
@@ -146,3 +216,18 @@ class TestResolver(unittest.TestCase):
             return gatherResults([d1,d2])
 
         return d
+
+
+class TestTest(unittest.TestCase):
+    
+    def test_timer(self):
+        from twisted.internet.task import deferLater
+        
+        def sayWorld():
+            print 'world'
+        
+        def sayHi():
+            print 'hello'
+            return deferLater(reactor, 0.1, sayWorld)
+
+        return deferLater(reactor, 2.1, sayHi)
