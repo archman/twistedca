@@ -3,20 +3,28 @@
 import socket, logging
 from copy import copy
 
-from twisted.internet.protocol import Protocol, DatagramProtocol
+from zope.interface import implements
+
+from twisted.internet.protocol import Protocol, DatagramProtocol, \
+                                      ServerFactory
 
 from TwCA.util import defs
 from TwCA.util.ca import CAmessage
 from TwCA.util.config import Config
+from TwCA.util.idman import DeferredManager
+
+from TwCA.util.interfaces import IConnectNotify
 
 from channel import Channel
 
 log=logging.getLogger('cas.endpoint')
 
 class CAcircuit(Protocol):
+    implements(IConnectNotify)
     
-    def __init__(self):
-        self.server=self.peer=self.tcpport=None
+    def __init__(self, server):
+        self.server=server
+        self.peer=self.tcpport=None
     
         self.prio, self.version=0, 11
 
@@ -37,11 +45,21 @@ class CAcircuit(Protocol):
                     23:self.ping,
                    }
 
-        self.closeList=set()
+        self.__C=DeferredManager()
+        self.__D=DeferredManager()
+        self.__D.callback(self)
         
         self.channels={}
 
         self.next_sid=0
+
+    @property
+    def whenCon(self):
+        return self.__C.get()
+
+    @property
+    def whenDis(self):
+        return self.__D.get()
     
     def dropchan(self, channel):
         assert channel.sid in self.channels
@@ -121,7 +139,6 @@ class CAcircuit(Protocol):
     # socket operations
 
     def connectionMade(self):
-        self.server=self.factory.server
         self.peer=self.transport.getPeer()
         self.tcpport=self.transport.getHost().port
 
@@ -133,15 +150,25 @@ class CAcircuit(Protocol):
         log.debug('connection from %s',self.peer)
         log.debug('Create %s',self)
 
+        self.server.circuits.add(self)
+
+        self.__D=DeferredManager()
+        self.__C.callback(self)
+
     def connectionLost(self, reason):
-        self.server.dispatchtcp(None, self.peer, self)
-        # make a copy of the list (not contents)
-        # because calling c() may cause the size
-        # of closeList to change
-        for c in copy(self.closeList):
-            c()
+
+        self.__C=DeferredManager()
+        D, self.__D = self.__D, None
+        D.callback(self)
+
+        self.server.circuits.remove(self)
 
         log.debug('Destroy %s',self)
+
+    def connectionFailed(self, reason):
+
+        C, self.__C = self.__C, DeferredManager()
+        C.callback(None)
 
     def send(self, msg):
         self.transport.write(msg)
@@ -157,9 +184,9 @@ class CAcircuit(Protocol):
         
             pkt, msg = CAmessage.unpack(msg)
             
-            hdl = self._circ.get(pkt.cmd, self.server.dispatchtcp)
+            hdl = self._circ.get(pkt.cmd, self.server.dispatch)
         
-            hdl(pkt, self.peer, self)
+            hdl(pkt, self, self.peer)
 
         self.in_buffer=msg # save remaining
 
@@ -167,6 +194,18 @@ class CAcircuit(Protocol):
         return 'Circuit v4%(version)d to %(peer)s as %(host)s:%(user)s'% \
             self.__dict__
 
+class CAServerCircuitFactory(ServerFactory):
+    
+    protocol = CAcircuit
+    server = None
+    circuits = None
+    
+    def __init__(self, server):
+        self.circuits=set()
+        self.server=server
+    
+    def buildProtocol(self, _):
+        return self.protocol(self.server)
 
 class UDPpeer(DatagramProtocol):
     

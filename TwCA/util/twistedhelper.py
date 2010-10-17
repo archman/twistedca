@@ -138,6 +138,8 @@ class CAExpectMixen(object):
         self.halt=halt
         
         self._dispatch_table={}
+        self.done=Deferred()
+        self.halted=False
         
         self.dest=None
 
@@ -175,13 +177,18 @@ class CAExpectMixen(object):
             if self.debug:
                 print 'Tx', epkt
 
-        if self.halt and len(self.program)==0:
-            self.transport.loseConnection()
-            if self.debug:
-                print 'Halt'
+        if len(self.program)==0:
+            if self.halt:
+                self.transport.loseConnection()
+                if self.debug:
+                    print 'Halt'
 
-        if self.debug and len(self.program)==0:
-            print 'Done'
+            if self.debug:
+                print 'Done'
+
+            if not self.halted:
+                self.done.callback(self)
+                self.halted=True
 
 class CAExpectProtocol(CAProtocol,CAExpectMixen):
 
