@@ -9,6 +9,7 @@ from twisted.internet import reactor
 #DelayedCall.debug=True
 
 from twisted.internet.defer import gatherResults
+from twisted.internet.task import deferLater
 from twisted.trial import unittest
 from twisted.internet.protocol import ServerFactory
 
@@ -54,6 +55,41 @@ class TestResolver(unittest.TestCase):
         if hasattr(self, 'resolv'):
             ds.append(self.resolv.close())
         return gatherResults(ds)
+
+    def test_udpnoop(self):
+        """Start up and shutdown without doing anything
+        """
+
+        conf=Config(Config.empty)
+        conf.addrs=[('127.0.0.1', 1)] # will not be used
+        
+        resolv=Resolver(conf=conf)
+        
+        d1=resolv.lookup('junkname')
+        @d1.addCallback
+        def abort(name):
+            self.assertTrue(name is None)
+        
+        d2=resolv.close()
+        
+        return gatherResults([d1,d2])
+
+    def test_udpabort(self):
+        """Abort in progress request
+        """
+
+        conf=Config(Config.empty)
+        
+        resolv=Resolver(conf=conf)
+        
+        d1=resolv.lookup('junkname')
+        @d1.addCallback
+        def abort(name):
+            self.assertTrue(name is None)
+
+        d2=deferLater(reactor, 0.5, resolv.close)
+        
+        return gatherResults([d1,d2])
     
     def test_udplookup(self):
         name=padString('test1')
@@ -99,6 +135,70 @@ class TestResolver(unittest.TestCase):
 
 
         return d
+
+    def test_tcpnoop(self):
+        client=StubClient()
+        client.tst=self
+        
+        self.cfact=CACircuitFactory(client)
+
+        conf=Config(Config.empty)
+        conf.nameservs=[('127.0.0.1', 1)] # will not be used
+        
+        resolv=Resolver(conf=conf, tcpfactory=self.cfact)
+        
+        d1=resolv.lookup('junkname')
+        @d1.addCallback
+        def abort(name):
+            self.assertTrue(name is None)
+        
+        d2=resolv.close()
+        
+        return gatherResults([d1,d2])
+    
+    def test_tcpabort(self):
+        """Abort a TCP persistent circuit
+        """
+        client=StubClient()
+        client.tst=self
+
+        name1=padString('test1')
+        user=padString('hello')
+        host=padString('world')
+
+        sfact=self.sfact=CAExpectFactory()
+        sfact.tst=self
+            
+        self.serv=reactor.listenTCP(0, sfact, interface='127.0.0.1')
+        target=('127.0.0.1', self.serv.getHost().port)
+
+        sfact.program= \
+            [('send',CAmessage(dtype=0, count=12)),
+             ('recv',CAmessage(dtype=0, count=CA_VERSION)),
+             ('recv',CAmessage(cmd=20, size=len(user), body=user)),
+             ('recv',CAmessage(cmd=21, size=len(host), body=host)),
+            ]+[('recv',CAmessage(cmd=6, size=len(name1),
+                               dtype=5, count=CA_VERSION,
+                               p1=0, p2=0, body=name1))]*6
+        
+        self.cfact=CACircuitFactory(client)
+
+        conf=Config(Config.empty)
+        conf.nameservs=[target]
+        
+        resolv=Resolver(conf=conf, tcpfactory=self.cfact)
+        
+
+        d=resolv.lookup('test1')
+
+        @d.addCallback
+        def result(srv):
+            self.assertTrue(srv is None)
+
+        d2=deferLater(reactor, 0.5, resolv.close)
+
+        return gatherResults([d,d2])
+
     
     def test_tcplookup(self):
         client=StubClient()
@@ -159,3 +259,33 @@ class TestResolver(unittest.TestCase):
             self.assertEqual(len(self.sfact.program),0)
 
         return d
+    
+    def test_tcpnoserv(self):
+        """Abort a TCP persistent circuit trying to connect to nothing
+        """
+        client=StubClient()
+        client.tst=self
+
+        name1=padString('test1')
+        user=padString('hello')
+        host=padString('world')
+
+        target=('127.0.0.1', 65534)
+        
+        self.cfact=CACircuitFactory(client)
+
+        conf=Config(Config.empty)
+        conf.nameservs=[target]
+        
+        resolv=Resolver(conf=conf, tcpfactory=self.cfact)
+        
+
+        d=resolv.lookup('test1')
+
+        @d.addCallback
+        def result(srv):
+            self.assertTrue(srv is None)
+
+        d2=deferLater(reactor, 0.5, resolv.close)
+
+        return gatherResults([d,d2])

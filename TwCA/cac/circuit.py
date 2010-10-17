@@ -199,12 +199,17 @@ class CACircuitFactory(ClientFactory):
         self.circuits={}
 
     def close(self):
+        if self.client is None:
+            return
+
         for c in copy(self.circuits.values()):
             c._persist=False
-            if hasattr(c, '__T'):
+            if c.__T is not None:
                 c.__T.cancel() # reconnect timer
+                c.__T=None
             else:
                 c.disconnect()
+
         self.client=None
 
     def buildProtocol(self,_):
@@ -235,6 +240,7 @@ class CACircuitFactory(ClientFactory):
             circ.connect()
             circ.circDest=srv
             circ._persist=False
+            circ.__T=None # reconnect timer
             self.circuits[srv]=circ
 
         if persist is not None:
@@ -242,26 +248,31 @@ class CACircuitFactory(ClientFactory):
 
         return circ.whenCon
 
+    def reconnectCircuit(self, circ):
+        circ.__T=None
+        circ.connect()
+
     def ConnectorFailed(self, circ, _):
         assert circ.circDest in self.circuits
+
         if not circ._persist:
             self.circuits.pop(circ.circDest)
 
-    def clientConnectionFailed(self, circ, _):
-        if circ._persist:
-            circ.__T=reactor.callLater(self.timeout/2.0, circ.connect)
+        else:
+            assert circ.__T is None
+            circ.__T=reactor.callLater(self.timeout/2.0,
+                             self.reconnectCircuit, circ)
 
     def ConnectorLost(self, circ, _):
         assert circ.circDest in self.circuits
 
         if not circ._persist:
             self.circuits.pop(circ.circDest)
-            return
 
-    def clientConnectionLost(self, circ, _):
-        if not circ._persist:
-            return
-        log.debug('Reconnect persistent circuit to %s',
-                  circ.circDest)
-        circ.__T=reactor.callLater(self.timeout/2.0, circ.connect)
+        else:
+            log.debug('Reconnect persistent circuit to %s',
+                    circ.circDest)
+            assert circ.__T is None
+            circ.__T=reactor.callLater(self.timeout/2.0,
+                            self.reconnectCircuit, circ)
 
