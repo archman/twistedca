@@ -2,17 +2,6 @@
 
 from zope.interface import Interface, Attribute
 
-class IDispatch(Interface):
-    """A sink for CA packets
-    """
-
-    def dispatch(pkt, endpoint, peer=None):
-        """Packet receiver
-        
-        endpoint is TCP if peer is None
-        or UDP if peer is not None
-        """
-
 class IClient(Interface):
     
     def close(self):

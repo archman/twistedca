@@ -3,12 +3,16 @@
 import logging
 log=logging.getLogger('util.twisted')
 
+from zope.interface import implements
+
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.tcp import Connector
 from twisted.internet.protocol import Protocol, DatagramProtocol
 
-from TwCA.util.idman import DeferredManager
-from TwCA.util.ca import CAmessage
+from idman import DeferredManager
+from ca import CAmessage
+from interfaces import IConnectNotify
+
 
 class DeferredConnector(Connector):
     """Provides Deferred s for connection life cycle
@@ -30,6 +34,7 @@ class DeferredConnector(Connector):
     connectionFailed: fire D, fire C (None)
     connectionLost  : fire D, arm C
     """
+    implements(IConnectNotify)
 
     # save protocol since it is cleared from the
     # transport before connectionLost() is called

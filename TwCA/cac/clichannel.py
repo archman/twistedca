@@ -7,9 +7,12 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, succeed, inlineCallbacks
-from TwCA.util.idman import DeferredManager, CBManager
 
-from interfaces import IClientcircuit, IDispatch
+from TwCA.util.idman import DeferredManager, CBManager
+from TwCA.util.interfaces import IDispatch
+from TwCA.util.interfaces import IConnectNotify
+
+from interfaces import IClientcircuit
 from client import CAClient
 
 class CAClientChannel(object):
@@ -17,7 +20,7 @@ class CAClientChannel(object):
     
     Handles lookups and (re)connection.
     """
-    implements(IClientcircuit, IDispatch)
+    implements(IClientcircuit, IDispatch, IConnectNotify)
 
     S_init='Disconnected'
     S_lookup='PV lookup'

@@ -12,7 +12,8 @@ from twisted.internet.defer import Deferred, succeed
 
 from TwCA.util.config import Config
 
-from interfaces import IClient, IDispatch
+from TwCA.util.interfaces import IDispatch
+from interfaces import IClient
 
 from resolver import Resolver
 from circuit import CACircuitFactory
