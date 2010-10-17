@@ -4,9 +4,9 @@ import unittest
 from copy import deepcopy
 from array import array
 
-from util import cadata
-import util.defs as defs
-from util.convert import dbr_convert_value, dbr_convert_meta_value
+from TwCA.util import cadata
+import TwCA.util.defs as defs
+from TwCA.util.convert import dbr_convert_value, dbr_convert_meta_value
 
 class TestSerialize(unittest.TestCase):
     
