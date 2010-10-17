@@ -3,7 +3,7 @@
 import socket, logging
 from socket import inet_aton
 
-log=logging.getLogger('cac.repclient')
+log=logging.getLogger('TwCA.cac.repclient')
 
 from TwCA.util.ca import CAmessage
 from TwCA.util.defs import CLIENT_PORT

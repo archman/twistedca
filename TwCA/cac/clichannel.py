@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('cac.clichannel')
+log=logging.getLogger('TwCA.cac.clichannel')
 
 from zope.interface import implements
 

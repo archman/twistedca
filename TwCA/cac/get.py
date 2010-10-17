@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('cac.get')
+log=logging.getLogger('TwCA.cac.get')
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred

@@ -17,7 +17,7 @@ from TwCA.util.twistedhelper import DeferredConnector
 
 from interfaces import IClientcircuit
 
-log=logging.getLogger('cac.circuit')
+log=logging.getLogger('TwCA.cac.circuit')
 
 class CAClientcircuit(Protocol):
     """Protocol for speaking to a CA server

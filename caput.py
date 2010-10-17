@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging, sys
-log=logging.getLogger('caput')
+log=logging.getLogger('TwCA.caput')
 
 from twisted.internet import reactor
 from twisted.internet.error import ReactorNotRunning

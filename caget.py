@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging, sys
-log=logging.getLogger('caget')
+log=logging.getLogger('TwCA.caget')
 
 from twisted.internet import reactor
 from twisted.internet.error import ReactorNotRunning

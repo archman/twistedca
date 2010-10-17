@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, socket, logging, ctypes, array
-log=logging.getLogger('util.ifinspect.unix')
+log=logging.getLogger('TwCA.util.ifinspect.unix')
 from socket import inet_ntoa, inet_aton, htonl, htons
 from fcntl import ioctl
 

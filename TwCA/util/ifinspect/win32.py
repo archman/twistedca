@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, socket, logging, array
-log=logging.getLogger('util.ifinspect.win32')
+log=logging.getLogger('TwCA.util.ifinspect.win32')
 from socket import inet_ntoa, inet_aton, htonl, htons
 
 from ctypes import *

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('cac.partyline')
+log=logging.getLogger('TwCA.cac.partyline')
 
 from time import time, ctime
 from copy import copy

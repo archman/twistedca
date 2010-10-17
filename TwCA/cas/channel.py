@@ -8,7 +8,7 @@ from TwCA.util import error
 from TwCA.util.cadata import dbf_element_size
 from TwCA.util.defs import dbr_to_dbf, RIGHT
 
-log=logging.getLogger('cas.channel')
+log=logging.getLogger('TwCA.cas.channel')
 
 class Channel(object):
     """The association between a client and a PV.

@@ -2,7 +2,7 @@
 
 import logging
 
-log=logging.getLogger('cas.pv')
+log=logging.getLogger('TwCA.cas.pv')
 
 from TwCA.util.defs import *
 from TwCA.util.cadata import caMetaProxy, tostring, fromstring

@@ -7,7 +7,7 @@ network interfaces
 """
 
 import sys, logging, socket
-log=logging.getLogger('util.ifinspect')
+log=logging.getLogger('TwCA.util.ifinspect')
 
 __all__=['getifinfo']
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('cac.monitor')
+log=logging.getLogger('TwCA.cac.monitor')
 from copy import copy
 
 from twisted.internet import reactor

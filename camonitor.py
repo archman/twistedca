@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging, sys
-log=logging.getLogger('camonitor')
+log=logging.getLogger('TwCA.camonitor')
 from time import strftime, localtime
 
 from twisted.internet import reactor
@@ -10,7 +10,6 @@ from twisted.internet.error import ReactorNotRunning
 from twisted.internet.defer import DeferredList
 
 from TwCA import __version__ as TwCAVersion
-from TwCA.cac.client import CAClientShutdown
 from TwCA.cac.clichannel import CAClientChannel
 from TwCA.cac.monitor import CAMonitor
 from TwCA.util.cadata import printMeta

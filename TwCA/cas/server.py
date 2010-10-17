@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging, socket
-log=logging.getLogger('cas.server')
+log=logging.getLogger('TwCA.cas.server')
 from errno import EPERM, EINVAL, ENETUNREACH
 from socket import inet_aton
 

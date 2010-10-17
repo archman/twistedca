@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('util.twisted')
+log=logging.getLogger('TwCA.util.twistedhelper')
 
 from zope.interface import implements
 

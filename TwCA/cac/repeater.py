@@ -5,7 +5,7 @@ from socket import INADDR_LOOPBACK, inet_aton
 from copy import copy
 from struct import Struct
 
-log=logging.getLogger('cac.repeater')
+log=logging.getLogger('TwCA.cac.repeater')
 
 from TwCA.util.ca import CAmessage
 from TwCA.util.defs import CLIENT_PORT

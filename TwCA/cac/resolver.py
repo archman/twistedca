@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging, socket
-log=logging.getLogger('cac.resolver')
+log=logging.getLogger('TwCA.cac.resolver')
 from errno import EPERM
 from copy import copy
 

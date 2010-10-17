@@ -17,7 +17,7 @@ from TwCA.util.interfaces import IConnectNotify
 
 from channel import Channel
 
-log=logging.getLogger('cas.endpoint')
+log=logging.getLogger('TwCA.cas.endpoint')
 
 class CAcircuit(Protocol):
     implements(IConnectNotify)

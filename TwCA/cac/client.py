@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-log=logging.getLogger('cac.client')
+log=logging.getLogger('TwCA.cac.client')
 from copy import copy
 
 from zope.interface import implements
