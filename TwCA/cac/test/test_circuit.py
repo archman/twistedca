@@ -10,29 +10,19 @@ from twisted.trial import unittest
 from twisted.internet.protocol import ServerFactory
 from twisted.protocols.loopback import loopbackTCP
 
-from TwCA.util.config import Config
-from TwCA.util.ca import CAmessage, padString, searchbody
-from TwCA.util.twistedhelper import CAExpectProtocol, CAExpectDatagramProtocol
+from TwCA.util.ca import CAmessage, padString
+from TwCA.util.twistedhelper import CAExpectProtocol
 from TwCA.util.defs import CA_VERSION
 
 from TwCA.cac.circuit import CAClientcircuit, CACircuitFactory
-from TwCA.cac.resolver import Resolver
-#from TwCA.cac.client import CAClient
 
-testconfig=Config()
-testconfig.sport=55064
-testconfig.cport=55065
-
-testconfig.addrs=[('127.0.0.1',testconfig.sport)]
-testconfig.autoaddrs=False
-testconfig.nameservs=[]
-    
 class StubClient:
     user='hello'
     host='world'
     reactor=reactor
     def dispatch(self, pkt, _):
         self.fail('Unexpected packet %s',pkt)
+
 
 class TestCircuit(unittest.TestCase):
     
@@ -186,55 +176,5 @@ class TestCircuitFactory(unittest.TestCase):
             self.assertTrue(c1 is c2)
             
             # circuit will be closed during cleanup
-
-        return d
-
-class TestResolver(unittest.TestCase):
-    
-    def test_udplookup(self):
-        name=padString('test1')
-
-        serv=CAExpectDatagramProtocol(self, [], halt=False)
-
-        up=reactor.listenUDP(0, serv, interface='127.0.0.1')
-
-        addr=up.getHost()
-        addr=addr.host, addr.port
-
-        conf=Config(Config.empty)
-        conf.addrs=[addr]
-        
-        resolv=Resolver(conf=conf)
-
-        serv.dest='127.0.0.1', resolv._udp.getHost().port
-
-        # name search
-        # respond after second request
-        serv.program= \
-            [('recv',CAmessage(dtype=0, count=CA_VERSION)),
-             ('recv',CAmessage(cmd=6, size=len(name),
-                               dtype=5, count=CA_VERSION,
-                               p1=0, p2=0, body=name)),
-             ('recv',CAmessage(dtype=0, count=CA_VERSION)),
-             ('recv',CAmessage(cmd=6, size=len(name),
-                               dtype=5, count=CA_VERSION,
-                               p1=0, p2=0, body=name)),
-             ('send',CAmessage(cmd=6, size=8, dtype=addr[1],
-                               p1=0xffffffff, p2=0,
-                               body=searchbody.pack(11))),
-            ]
-        
-
-        d=resolv.lookup('test1')
-
-        @d.addCallback
-        def result(srv):
-            self.assertEqual(srv, addr)
-            
-            self.assertEqual(len(serv.program),0)
-
-            d1=up.stopListening()
-            d2=resolv.close()
-            return gatherResults([d1,d2])
 
         return d
