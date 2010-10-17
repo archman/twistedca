@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""A variety of containers which are more aware of their contents
+"""
 
 class IDManager(dict):
     """
@@ -14,12 +16,12 @@ class IDManager(dict):
         id=self._next
         self[id]=holder
         self._next+=1
-        while self._next is self:
+        while self._next in self:
             self._next+=1
         return id
 
-    def remove(self, holder):
-        self.pop(holder, None)
+    def remove(self, id):
+        self.pop(id, None)
 
     def __setitem__(self, k, v):
         if k in self and v is not self[k]:
@@ -32,12 +34,72 @@ class CBManager(dict):
     """
     
     def add(self, cb, *args, **kwargs):
+        assert cb not in self
         self[cb]=(args,kwargs)
 
     def remove(self, cb):
-        self.pop(cb, None)
+        assert cb in self
+        self.pop(cb)
 
     def __call__(self, *args, **kwargs):
+        from copy import copy
         for cb,(a,kw) in self.iteritems():
-            kwargs.update(kw)
-            cb(*(args+a), **kwargs)
+            k=kwargs.copy()
+            k.update(kw)
+            cb(*(args+a), **k)
+
+class DeferredManager(set):
+    """Keep a set of Deferreds to fire.
+    
+    Each requester gets a new Deferred so that
+    it can be chained by its user
+    """
+
+    __done=False
+
+    def add(self,defer):
+        raise NotImplementedError("Can't not add Deferreds manually")
+
+    def get(self):
+        from twisted.internet.defer import Deferred, \
+                                           succeed, fail
+        if self.__done:
+            if hasattr(self, '__result'):
+                return succeed(self.__result)
+            elif hasattr(self, '__fail'):
+                return fail(self.__fail)
+            else:
+                raise AssertionError('Logic error :()')
+
+        d=Deferred()
+        set.add(self, d)
+        return d
+
+    def callback(self, result):
+        if self.__done:
+            from twisted.internet.defer import AlreadyCalledError
+            raise self.AlreadyCalledError('DeferredManager already run')
+
+        self.__result=result
+        for d in self:
+            d.callback(result)
+
+        self.__done=True
+        self.clear()
+
+    def errback(self, fail=None):
+        if self.__done:
+            from twisted.internet.defer import AlreadyCalledError
+            raise self.AlreadyCalledError('DeferredManager already run')
+        
+        from twisted.python.failure import Failure
+
+        self.__fail=fail
+        if not isinstance(fail, Failure):
+            fail = Failure(fail)
+        for d in self:
+            d.errback(fail)
+
+        self.__done=True
+        self.clear()
+
