@@ -162,15 +162,22 @@ class CACircuitFactory(ClientFactory):
     
     protocol = CAClientcircuit
     
+    timeout = 10
+    
     class CACircuitConnector(DeferredConnector):
+        """Need to ensure that the factory has
+        dropped the circuit before we inform clients
+        so that a new request can be safely made from
+        the Deferred callback
+        """
         
         def connectionLost(self, res):
-            """Need to ensure that the factory has
-            dropped the circuit before we inform clients
-            so that a reconnect request gets a new Deferred
-            """
             self.factory.ConnectorLost(self, res)
             DeferredConnector.connectionLost(self, res)
+
+        def connectionFailed(self, res):
+            self.factory.ConnectorFailed(self, res)
+            DeferredConnector.connectionFailed(self, res)
 
     def __init__(self, client):
         self.client=client
@@ -203,13 +210,13 @@ class CACircuitFactory(ClientFactory):
 
             host, port = srv
 
-            circ=self.CACircuitConnector(host, port, self, timeout=10,
+            circ=self.CACircuitConnector(host, port, self,
+                                   timeout=self.timeout,
                                    bindAddress=None,
                                    reactor=self.client.reactor)
             circ.connect()
             circ.circDest=srv
             circ._persist=False
-            circ._nextattempt=0.5
             self.circuits[srv]=circ
 
         if persist is not None:
@@ -217,14 +224,14 @@ class CACircuitFactory(ClientFactory):
 
         return circ.whenCon
 
-    def clientConnectionFailed(self, circ, _):
+    def ConnectorFailed(self, circ, _):
         assert circ.circDest in self.circuits
-
         if not circ._persist:
             self.circuits.pop(circ.circDest)
-        else:
-            reactor.callLater(circ._nextattempt, circ.connect)
-            circ._nextattempt=min(2*circ._nextattempt,20)
+
+    def clientConnectionFailed(self, circ, _):
+        if circ._persist:
+            reactor.callLater(self.timeout/2.0, circ.connect)
 
     def ConnectorLost(self, circ, _):
         assert circ.circDest in self.circuits
@@ -233,8 +240,10 @@ class CACircuitFactory(ClientFactory):
             self.circuits.pop(circ.circDest)
             return
 
+    def clientConnectionLost(self, circ, _):
+        if not circ._persist:
+            return
         log.debug('Reconnect persistent circuit to %s',
                   circ.circDest)
-        circ._nextattempt=0.5
         circ.connect()
 

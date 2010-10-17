@@ -178,3 +178,56 @@ class TestCircuitFactory(unittest.TestCase):
             # circuit will be closed during cleanup
 
         return d
+
+    def test_persist(self):
+        """Test persistent circuits
+        
+        Used for TCP name servers
+        """
+        self.cfact.timeout=1
+
+        d=self.cfact.requestCircuit(self.target, persist=True)
+        
+        class Counter(object):
+            v=0
+        C=Counter()
+
+        @d.addCallback
+        def conn(circ):
+            self.failIfIdentical(circ, None, 'Connection failed')
+            self.assertIsInstance(circ, CAClientcircuit)
+
+            d=circ.transport.connector.whenDis
+
+            circ.transport.loseConnection()
+            C.v+=1
+            
+            return d
+
+        @d.addCallback
+        def dis(circ):
+            # reconnection is automatic,
+            # but we need to re-subscribe
+            d=circ.transport.connector.whenCon
+            C.v+=1
+            return d
+
+        @d.addCallback
+        def recon(circ):
+            self.assertEqual(C.v, 2)
+
+        return d
+
+    def test_noconnect(self):
+        self.cfact.timeout=1
+
+        host, port = self.target
+        failtarget=(host, port+1) # assumed to not be a ca server
+
+        d=self.cfact.requestCircuit(failtarget)
+
+        @d.addCallback
+        def con(circ):
+            self.assertTrue(circ is None)
+
+        return d
