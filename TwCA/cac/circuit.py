@@ -161,6 +161,16 @@ class CACircuitFactory(ClientFactory):
     """
     
     protocol = CAClientcircuit
+    
+    class CACircuitConnector(DeferredConnector):
+        
+        def connectionLost(self, res):
+            """Need to ensure that the factory has
+            dropped the circuit before we inform clients
+            so that a reconnect request gets a new Deferred
+            """
+            self.factory.ConnectorLost(self, res)
+            DeferredConnector.connectionLost(self, res)
 
     def __init__(self, client):
         self.client=client
@@ -193,7 +203,7 @@ class CACircuitFactory(ClientFactory):
 
             host, port = srv
 
-            circ=DeferredConnector(host, port, self, timeout=10,
+            circ=self.CACircuitConnector(host, port, self, timeout=10,
                                    bindAddress=None,
                                    reactor=self.client.reactor)
             circ.connect()
@@ -216,7 +226,7 @@ class CACircuitFactory(ClientFactory):
             reactor.callLater(circ._nextattempt, circ.connect)
             circ._nextattempt=min(2*circ._nextattempt,20)
 
-    def clientConnectionLost(self, circ, _):
+    def ConnectorLost(self, circ, _):
         assert circ.circDest in self.circuits
 
         if not circ._persist:

@@ -32,7 +32,7 @@ class StubClient:
     host='world'
     reactor=reactor
     def dispatch(self, pkt, _):
-        self.fail('Unexpected package %s',pkt)
+        self.fail('Unexpected packet %s',pkt)
 
 class TestCircuit(unittest.TestCase):
     
@@ -106,6 +106,8 @@ class TestCircuit(unittest.TestCase):
 
 class TestCircuitFactory(unittest.TestCase):
     
+    timeout=5
+    
     class CAExpectFactory(ServerFactory):
         protocol=CAExpectProtocol
         tst=None
@@ -115,55 +117,75 @@ class TestCircuitFactory(unittest.TestCase):
         def buildProtocol(self, _):
             return self.protocol(self.tst, self.program, self.halt)
     
-    def test_connect(self):
+    def setUp(self):
         client=StubClient()
         
         user=padString('hello')
         host=padString('world')
         
-        sfact=self.CAExpectFactory()
-        sfact.tst=self
-        sfact.program = \
+        self.program = \
             [('send',CAmessage(dtype=0, count=13)),
              ('recv',CAmessage(dtype=0, count=CA_VERSION)),
              ('recv',CAmessage(cmd=20, size=len(user), body=user)),
              ('recv',CAmessage(cmd=21, size=len(host), body=host)),
             ]
+
+        sfact=self.CAExpectFactory()
+        sfact.tst=self
+        sfact.program=self.program+self.program
             
-        serv=reactor.listenTCP(0, sfact, interface='127.0.0.1')
+        self.serv=reactor.listenTCP(0, sfact, interface='127.0.0.1')
+        self.target=('127.0.0.1', self.serv.getHost().port)
         
-        cfact=CACircuitFactory(client)
+        self.cfact=CACircuitFactory(client)
+
+    def tearDown(self):
+        self.cfact.close()
+        return self.serv.loseConnection()
         
-        d=cfact.requestCircuit(('127.0.0.1', serv.getHost().port))
+    def test_connect(self):
+        """Test connect -> disconnect -> manual re-connect
+        """
+        d1=self.cfact.requestCircuit(self.target)
+        d2=self.cfact.requestCircuit(self.target)
         
-        @d.addCallback
+        self.assertEqual(len(self.cfact.circuits), 1)
+        
+        cc=self.cfact.circuits.values()[0]
+        self.assertFalse(cc._DeferredConnector__C._DeferredManager__done)
+
+        self.assertTrue(d1 is not d2)
+        
         def onConnect(circ):
+            self.failIfIdentical(circ, None, 'Connection failed')
             self.assertIsInstance(circ, CAClientcircuit)
 
-            d2=circ.transport.connector.whenDis
+            d=circ.transport.connector.whenDis
             
             circ.transport.loseConnection()
-            
-            d3=circ.transport.connector.whenDis
-            
-            self.assertTrue(d2 is d3)
 
-            return d3
+            return d
+
+        d1.addCallback(onConnect)
+        d2.addCallback(onConnect)
         
-        @d.addCallback
         def onDisconnect(circ):
             self.assertTrue(isinstance(circ, CAClientcircuit))
+            self.assertEqual(len(self.program),4)
             
-            cfact.close()
-            d4=serv.loseConnection()
-            
-            return d4
+            return self.cfact.requestCircuit(self.target)
 
-        @d.addErrback
-        def onFail(fail):
-            print '>>> Error'
-            print fail
-            return fail
+        d1.addCallback(onDisconnect)
+        d2.addCallback(onDisconnect)
+
+        d=gatherResults([d1, d2])
+        @d.addCallback
+        def onReconnect(circs):
+            self.assertEqual(len(circs), 2)
+            c1, c2 = circs
+            self.assertTrue(c1 is c2)
+            
+            # circuit will be closed during cleanup
 
         return d
 
@@ -216,18 +238,3 @@ class TestResolver(unittest.TestCase):
             return gatherResults([d1,d2])
 
         return d
-
-
-class TestTest(unittest.TestCase):
-    
-    def test_timer(self):
-        from twisted.internet.task import deferLater
-        
-        def sayWorld():
-            print 'world'
-        
-        def sayHi():
-            print 'hello'
-            return deferLater(reactor, 0.1, sayWorld)
-
-        return deferLater(reactor, 2.1, sayHi)

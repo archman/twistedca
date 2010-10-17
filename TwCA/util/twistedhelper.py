@@ -7,6 +7,7 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.tcp import Connector
 from twisted.internet.protocol import Protocol, DatagramProtocol
 
+from TwCA.util.idman import DeferredManager
 from TwCA.util.ca import CAmessage
 
 class DeferredConnector(Connector):
@@ -33,21 +34,22 @@ class DeferredConnector(Connector):
     def __init__(self, *args, **kws):
         Connector.__init__(self, *args, **kws)
         
-        self.__C=Deferred()
-        self.__D=succeed(None)
+        self.__C=DeferredManager()
+        self.__D=DeferredManager()
+        self.__D.callback(None)
 
     @property
     def whenCon(self):
-        return self.__C
+        return self.__C.get()
 
     @property
     def whenDis(self):
-        return self.__D
+        return self.__D.get()
 
-    def connectionFailed(self, _):
+    def connectionFailed(self, res):
         """connecting -> disconnected
         """
-        self.__C, C = Deferred(), self.__C
+        self.__C, C = DeferredManager(), self.__C
         C.callback(None)
         # now C armed, D fired
 
@@ -59,15 +61,15 @@ class DeferredConnector(Connector):
         # save protocol since it is cleared from the
         # transport before connectionLost() is called
         self.__protocol=self.transport.protocol
-        self.__D=Deferred()
+        self.__D=DeferredManager()
         self.__C.callback(self.__protocol)
         # now C fired, D armed
 
     def connectionLost(self, res):
         """connected -> disconnected
         """
-        self.__C=Deferred()
-        self.__D, D = Deferred(), self.__D
+        self.__C=DeferredManager()
+        self.__D, D = DeferredManager(), self.__D
         D.callback(self.__protocol)
         del self.__protocol
         # now C armed, D fired
