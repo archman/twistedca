@@ -8,7 +8,6 @@ from twisted.internet import reactor
 from twisted.internet.defer import gatherResults
 from twisted.trial import unittest
 from twisted.internet.protocol import ServerFactory
-from twisted.protocols.loopback import loopbackTCP
 
 from TwCA.util.ca import CAmessage, padString
 from TwCA.util.twistedhelper import CAExpectProtocol

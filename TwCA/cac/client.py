@@ -4,36 +4,38 @@ import logging
 log=logging.getLogger('cac.client')
 from copy import copy
 
+from zope.interface import implements
+
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
-from twisted.internet.defer import Deferred, fail
+from twisted.internet.defer import Deferred, succeed
 
 from TwCA.util.config import Config
 
+from interfaces import IClient, IDispatch
+
 from resolver import Resolver
 from circuit import CACircuitFactory
-
-class CAClientShutdown(Exception):
-    pass
 
 class CAClient(object):
     """Channel Access Client context
     
     Manages name search requests and TCP connections.
     """
-    # default client context
-    default=None
+    
+    implements(IClient, IDispatch)
     
     running=True
 
-    def __init__(self, conf=Config.default, user=None, host=None):
+    def __init__(self, conf=Config.default, user=None, host=None,
+                 reactor=reactor):
         """Construct a new client context
         
         Prepare a new context with the given config.
         If user and host are None then they are collected
         from the environment.
         """
-        self.conf=conf
+        self.conf, self.reactor=conf, reactor
         
         self.circuits=CACircuitFactory(self)
         
@@ -57,6 +59,9 @@ class CAClient(object):
         
         This will close all circuits and fail any pending
         actions (get, put, monitor, lookup)
+        
+        Returns a Deferred which is called when shutdown is
+        complete
         """
         if not self.running:
             return
@@ -66,20 +71,23 @@ class CAClient(object):
         for c in copy(self.closeList):
             c()
 
-        self.resolv.close()
+        d=self.resolv.close()
 
         self.circuits.close()
+        
+        return d
 
     def lookup(self, name):
         """Request a lookup on a PV name.
         
         Returns a Deferred() which will be called with
-        a value which can be passed to openCircuit().
+        a value which can be passed to openCircuit() or
+        None if a Name lookup is not possible.
         Name lookups only fail when the client context
         is closed.
         """
         if not self.running:
-            return fail(CAClientShutdown('Client not running'))
+            return succeed(None)
 
         return self.resolv.lookup(name)
 
@@ -87,22 +95,16 @@ class CAClient(object):
         """Request a circuit to the given CA server.
         
         Returns a Deferred() which is called with an
-        instance of CAClientcircuit.
-        This request fails in the circuit can not be
+        instance of CAClientcircuit or None (failure).
+        This request fails if the circuit can not be
         opened.
         """
         if not self.running:
-            return fail(CAClientShutdown('Client not running'))
+            return succeed(None)
 
         return self.circuits.requestCircuit(srv)
 
-    def dispatchtcp(self, pkt, peer, circuit):
-        if pkt is None:
-            return # circuit closed
+    def dispatch(self, pkt, circuit, peer=None):
 
-        if pkt.cmd in (6,14):
-            self.resolv._dataRx(pkt,(peer.host,peer.port),circuit)
-        else:
-            log.info('Client received unexpected from %s %s',peer,pkt)
+        log.info('Client received unexpected from %s %s',peer,pkt)
 
-CAClient.default=CAClient()

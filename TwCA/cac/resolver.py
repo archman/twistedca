@@ -102,6 +102,7 @@ class Resolver(object):
             return
         if circ.version<12:
             log.info('Resolver ignoring old %s',circ)
+            circ.transport.connector._persist=False
             return
 
         log.debug('Resolver TCP ready %s',circ)
