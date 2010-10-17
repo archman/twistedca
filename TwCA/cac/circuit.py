@@ -201,7 +201,10 @@ class CACircuitFactory(ClientFactory):
     def close(self):
         for c in copy(self.circuits.values()):
             c._persist=False
-            c.disconnect()
+            if hasattr(c, '__T'):
+                c.__T.cancel() # reconnect timer
+            else:
+                c.disconnect()
         self.client=None
 
     def buildProtocol(self,_):
@@ -246,7 +249,7 @@ class CACircuitFactory(ClientFactory):
 
     def clientConnectionFailed(self, circ, _):
         if circ._persist:
-            reactor.callLater(self.timeout/2.0, circ.connect)
+            circ.__T=reactor.callLater(self.timeout/2.0, circ.connect)
 
     def ConnectorLost(self, circ, _):
         assert circ.circDest in self.circuits
@@ -260,5 +263,5 @@ class CACircuitFactory(ClientFactory):
             return
         log.debug('Reconnect persistent circuit to %s',
                   circ.circDest)
-        circ.connect()
+        circ.__T=reactor.callLater(self.timeout/2.0, circ.connect)
 
