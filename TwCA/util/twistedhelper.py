@@ -55,12 +55,12 @@ class DeferredConnector(Connector):
 
         Connector.connectionFailed(self, res)
 
-    def connectionMade(self):
+    def connectionMade(self, protocol):
         """connecting -> connected
         """
         # save protocol since it is cleared from the
         # transport before connectionLost() is called
-        self.__protocol=self.transport.protocol
+        self.__protocol=protocol
         self.__D=DeferredManager()
         self.__C.callback(self.__protocol)
         # now C fired, D armed
@@ -134,6 +134,8 @@ class CAExpectMixen(object):
         self._dispatch_default=self.expect
 
     def expect(self, pkt, x, y=None):
+        self.tst.failIfEqual(len(self.program), 0,
+                        'Received data after end of program')
         cmd, epkt = self.program.pop(0)
         self.tst.assertEqual(cmd, 'recv')
         

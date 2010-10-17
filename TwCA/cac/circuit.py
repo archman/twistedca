@@ -126,7 +126,7 @@ class CAClientcircuit(Protocol):
         """
         if hasattr(self.transport.connector, 'connectionMade'):
             # the testing transports have no connector
-            self.transport.connector.connectionMade()
+            self.transport.connector.connectionMade(self)
 
     # socket operations
 
