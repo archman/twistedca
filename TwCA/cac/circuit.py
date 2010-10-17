@@ -26,7 +26,7 @@ class CAClientcircuit(Protocol):
     implements(IClientcircuit)
 
     def __init__(self, client):
-        self.peer=None
+        self.readyWait=self.peer=None
         self.client=client
     
         self.prio, self.version=0, 11
@@ -84,6 +84,11 @@ class CAClientcircuit(Protocol):
         self.version=min(defs.CA_VERSION, pkt.count)
         self.prio=pkt.dtype
         log.debug('Version %s',self)
+        
+        if self.readyWait is not None:
+            self.readyWait.cancel()
+            self.readyWait=None
+            self.circuitReady()
 
     def ping(self, pkt, _):
         self.send(pkt.pack())
@@ -111,6 +116,18 @@ class CAClientcircuit(Protocol):
             return
         act.dispatch(pkt, circuit)
 
+    def circuitReady(self):
+        """Circuit is ready for use after it has received a version
+        message from the server, or some time has elapsed.
+        
+        >= v12 servers send version immediately to indicate
+        support for name search over TCP.  If we don't receive
+        a message then use default version initially.
+        """
+        if hasattr(self.transport.connector, 'connectionMade'):
+            # the testing transports have no connector
+            self.transport.connector.connectionMade()
+
     # socket operations
 
     def connectionMade(self):
@@ -125,10 +142,8 @@ class CAClientcircuit(Protocol):
         msg+=CAmessage(cmd=21, size=len(host), body=host).pack()
         
         self.transport.write(msg)
-        
-        if hasattr(self.transport.connector, 'connectionMade'):
-            # the testing transports have no connector
-            self.transport.connector.connectionMade()
+
+        self.readyWait=reactor.callLater(0.1, self.circuitReady)
 
     def connectionLost(self, reason):
         log.debug('Destroy %s',self)

@@ -22,74 +22,102 @@ class StubClient:
     reactor=reactor
     def dispatch(self, pkt, _):
         self.fail('Unexpected packet %s',pkt)
-
+    
+class CAExpectFactory(ServerFactory):
+    protocol=CAExpectProtocol
+    tst=None
+    program=None
+    halt=False
+    
+    def buildProtocol(self, _):
+        return self.protocol(self.tst, self.program, self.halt)
 
 class TestCircuit(unittest.TestCase):
     
-    timeout=1
+    timeout=4
         
     class _CAClientcircuit(CAClientcircuit):
         # stop after version received
         def caver(self, pkt, endpoint):
             CAClientcircuit.caver(self,pkt,endpoint)
             self.transport.loseConnection()
+    
+    def setUp(self):
+        client=StubClient()
+
+        sfact=self.sfact=CAExpectFactory()
+        sfact.tst=self
+        sfact.program=[]
+            
+        self.serv=reactor.listenTCP(0, sfact, interface='127.0.0.1')
+        self.target=('127.0.0.1', self.serv.getHost().port)
+        
+        self.cfact=CACircuitFactory(client)
+
+    def tearDown(self):
+        self.cfact.close()
+        return self.serv.loseConnection()
 
     def test_handshakeV11(self):
         """Handshake with a v11 server.
         
         Server sends version after authentication
         """
-        client=StubClient()
         
         user=padString('hello')
         host=padString('world')
 
-        program= \
+        self.sfact.program= \
             [('recv',CAmessage(dtype=0, count=CA_VERSION)),
              ('recv',CAmessage(cmd=20, size=len(user), body=user)),
              ('recv',CAmessage(cmd=21, size=len(host), body=host)),
-             ('send',CAmessage(dtype=0, count=11)),
             ]
         
-        serv=CAExpectProtocol(self, program, halt=False)
-        cli =self._CAClientcircuit(client)
+        d=self.cfact.requestCircuit(self.target)
 
-        d=loopbackTCP(serv, cli, noisy=True)
         @d.addCallback
-        def postCondition(value):
-            self.assertEqual(len(serv.program),0)
-            self.assertEqual(cli.version,11)
-            return value
+        def postCondition(circ):
+            self.assertTrue(circ is not None)
+            self.assertEqual(self.sfact.program,[])
+            self.assertEqual(circ.version,11)
 
         return d
 
-    def test_handshakeV13(self):
+    def test_handshakeV12(self):
         """Handshake with a v11 server.
         
         Server sends version on connection
         to facilitate name server on TCP
         """
-        client=StubClient()
         
         user=padString('hello')
         host=padString('world')
 
-        program= \
-            [('send',CAmessage(dtype=0, count=13)),
+        self.sfact.program= \
+            [('send',CAmessage(dtype=0, count=12)),
              ('recv',CAmessage(dtype=0, count=CA_VERSION)),
              ('recv',CAmessage(cmd=20, size=len(user), body=user)),
              ('recv',CAmessage(cmd=21, size=len(host), body=host)),
             ]
-        
-        serv=CAExpectProtocol(self, program, halt=False)
-        cli =self._CAClientcircuit(client)
+        # since client gets notification before program
+        # completes have server do shutdown
+        self.sfact.halt=True
 
-        d=loopbackTCP(serv, cli, noisy=True)
+        d=self.cfact.requestCircuit(self.target)
+
         @d.addCallback
-        def postCondition(value):
-            self.assertEqual(len(serv.program),0)
-            self.assertEqual(cli.version,13)
-            return value
+        def postCondition(circ):
+            self.assertTrue(circ is not None)
+            # we get notification when the first packet is processed
+            # the next three may have been received
+            self.assertTrue(len(self.sfact.program)<=3)
+            self.assertEqual(circ.version,12)
+            
+            return circ.transport.connector.whenDis
+
+        @d.addCallback
+        def done(circ):
+            self.assertEqual(self.sfact.program,[])
 
         return d
 
@@ -97,15 +125,6 @@ class TestCircuit(unittest.TestCase):
 class TestCircuitFactory(unittest.TestCase):
     
     timeout=5
-    
-    class CAExpectFactory(ServerFactory):
-        protocol=CAExpectProtocol
-        tst=None
-        program=None
-        halt=False
-        
-        def buildProtocol(self, _):
-            return self.protocol(self.tst, self.program, self.halt)
     
     def setUp(self):
         client=StubClient()
@@ -120,7 +139,7 @@ class TestCircuitFactory(unittest.TestCase):
              ('recv',CAmessage(cmd=21, size=len(host), body=host)),
             ]
 
-        sfact=self.CAExpectFactory()
+        sfact=CAExpectFactory()
         sfact.tst=self
         sfact.program=self.program+self.program
             
