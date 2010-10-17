@@ -29,11 +29,13 @@ class Request(object):
         self.Skip=set()
         
         nbody=padString(name)
-        self.msg=CAmessage(cmd=0, count=CA_VERSION).pack()
-        self.msg+=CAmessage(cmd=6, size=len(nbody), dtype=5,
+        self.udp=CAmessage(cmd=0, count=CA_VERSION).pack()
+        self.tcp=CAmessage(cmd=6, size=len(nbody), dtype=5,
                            count=CA_VERSION,
                            p1=id, p2=id, body=nbody
                           ).pack()
+
+        self.udp=self.udp+self.tcp
 
         self.lookup()
 
@@ -95,10 +97,22 @@ class Resolver(object):
             self.addrs.add(addr)
 
     def nameservReady(self, circ):
+        if circ is None:
+            # ignore connection for for persistent circuits
+            return
+        if circ.version<12:
+            log.info('Resolver ignoring old %s',circ)
+            return
+
         log.debug('Resolver TCP ready %s',circ)
+        
+        # patch packet table
+        circ._circ[6]=self._dataRx
+        circ._circ[14]=self._dataRx
+        
         self.tcpReady.add(circ)
-        circ.transport.connector.circLost.addCallback(self._circuitLost)
-        return circ
+        d=circ.transport.connector.whenDis
+        d.addCallback(self._circuitLost)
 
     def _circuitLost(self, circ):
         self.tcpReady.remove(circ)
@@ -106,7 +120,6 @@ class Resolver(object):
         d=self.tcpfactory.requestCircuit(circ.transport.connector.circDest, persist=True)
         d.addCallback(self.nameservReady)
         log.debug('Resolver waiting for %s',circ)
-        return circ
 
     def close(self):
         self.nextID=None
@@ -147,15 +160,19 @@ class Resolver(object):
         for addr in self.addrs:
 
             try:
-                self._udp.write(req.msg, addr)
+                self._udp.write(req.udp, addr)
             except socket.error, e:
                 if e.errno!=EPERM:
                     raise
 
         for sock in self.tcpReady:
-            sock.send(req.msg)
+            sock.send(req.tcp)
 
-    def _dataRx(self, pkt, srv, _):
+    def _dataRx(self, pkt, endpoint, srv=None):
+        if srv is None:
+            # TCP endpoint
+            srv=endpoint.peer.host, endpoint.peer.port
+
         if pkt.cmd==0:
             pass
 

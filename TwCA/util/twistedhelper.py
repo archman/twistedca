@@ -30,6 +30,10 @@ class DeferredConnector(Connector):
     connectionFailed: fire D, fire C (None)
     connectionLost  : fire D, arm C
     """
+
+    # save protocol since it is cleared from the
+    # transport before connectionLost() is called
+    __protocol=None
     
     def __init__(self, *args, **kws):
         Connector.__init__(self, *args, **kws)
@@ -58,8 +62,6 @@ class DeferredConnector(Connector):
     def connectionMade(self, protocol):
         """connecting -> connected
         """
-        # save protocol since it is cleared from the
-        # transport before connectionLost() is called
         self.__protocol=protocol
         self.__D=DeferredManager()
         self.__C.callback(self.__protocol)
@@ -70,8 +72,11 @@ class DeferredConnector(Connector):
         """
         self.__C=DeferredManager()
         self.__D, D = DeferredManager(), self.__D
-        D.callback(self.__protocol)
-        del self.__protocol
+        if self.__protocol is not None:
+            # the None case only happens if there was
+            # an exception during the connection setup
+            D.callback(self.__protocol)
+            self.__protocol=None
         # now C armed, D fired
 
         Connector.connectionLost(self, res)
@@ -121,7 +126,7 @@ class CADatagramProtocol(DatagramProtocol):
     _dispatch_default=_unknown_action
 
 class CAExpectMixen(object):
-    noisy=False
+    debug=False
     
     def __init__(self, tst, program, halt=True):
         self.tst, self.program=tst, program
@@ -147,6 +152,9 @@ class CAExpectMixen(object):
         self.tst.assertEqual(pkt.p2,   epkt.p2)
         self.tst.assertEqual(pkt.body ,epkt.body)
         
+        if self.debug:
+            print 'Rx',pkt
+        
         self.send()
 
     def send(self):
@@ -159,8 +167,16 @@ class CAExpectMixen(object):
             else:
                 self.transport.write(epkt.pack(), self.dest)
 
-        if len(self.program)==0 and self.halt:
+            if self.debug:
+                print 'Tx', epkt
+
+        if self.halt and len(self.program)==0:
             self.transport.loseConnection()
+            if self.debug:
+                print 'Halt'
+
+        if self.debug and len(self.program)==0:
+            print 'Done'
 
 class CAExpectProtocol(CAProtocol,CAExpectMixen):
 

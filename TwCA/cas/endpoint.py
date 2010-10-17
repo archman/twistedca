@@ -182,7 +182,7 @@ class UDPpeer(DatagramProtocol):
         
             pkt, msg = CAmessage.unpack(msg)
         
-            self.handler(pkt, peer, self)
+            self.handler(pkt, self, peer)
 
         if len(msg)>0:
             log.warning('dropping incomplete message %s',repr(msg))
