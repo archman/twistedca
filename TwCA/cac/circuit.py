@@ -106,7 +106,7 @@ class CAClientcircuit(Protocol):
         if act is None:
             log.warning('Reply for non-existent action %d',pkt.p2)
             return
-        act.dispatch(pkt, peer, circuit)
+        act.dispatch(pkt, circuit)
 
     def forwardSubID(self, pkt, circuit):
 

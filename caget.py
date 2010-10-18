@@ -10,6 +10,7 @@ from twisted.internet.defer import DeferredList
 
 from TwCA import __version__ as TwCAVersion
 from TwCA.cac.clichannel import CAClientChannel
+from TwCA.cac.client import CAClient
 from TwCA.cac.get import CAGet
 from TwCA.util.defs import *
 from TwCA.util.cadata import printMeta
@@ -88,9 +89,6 @@ dcnt='Native' if count is None else count
 log.info('Requesting %s %s (%s) as %s',
          dbf_req, meta_req, count, dbf_dis)
 
-def channelCB(chan, status):
-    log.info(chan)
-
 def data(data, pv, cls):
     value,meta=data
     print pv,':',
@@ -121,8 +119,10 @@ if opt.tmo >=0.00001:
 
 gets=[]
 
+client=CAClient()
+
 for pv in pvs:
-    chan=CAClientChannel(pv, channelCB)
+    chan=CAClientChannel(pv, client)
 
     g=CAGet(chan, dbf_req, count, meta=meta_req,
             dbf_conv=dbf_dis)

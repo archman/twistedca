@@ -12,6 +12,7 @@ from twisted.internet.defer import DeferredList
 from TwCA import __version__ as TwCAVersion
 from TwCA.cac.clichannel import CAClientChannel
 from TwCA.cac.monitor import CAMonitor
+from TwCA.cac.client import CAClient
 from TwCA.util.cadata import printMeta
 from TwCA.util.defs import *
 from TwCA.util.error import ECA_NORMAL
@@ -97,9 +98,6 @@ def printTime(stamp):
     ns=ns[1:] # trim leading zero
     return sec+ns
 
-def channelCB(chan, status):
-    log.info(chan)
-
 def data(data, mask, status, pv, cls):
     print pad(pv),
     if data is None:
@@ -123,8 +121,10 @@ if opt.tmo >=0.00001:
 
 chans=[]
 
+client=CAClient()
+
 for pv in pvs:
-    chan=CAClientChannel(pv, channelCB)
+    chan=CAClientChannel(pv, client)
     
     mon=CAMonitor(chan, dbf_req, count, meta=META.TIME,
             dbf_conv=dbf_dis, mask=DBE.VALUE)

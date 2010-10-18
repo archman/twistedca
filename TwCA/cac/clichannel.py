@@ -127,7 +127,7 @@ class CAClientChannel(object):
             d, self._eventDis = self.__eventDis, None
             d.callback(self)
 
-        elif self.__T is None:
+        if self.__T is None:
             self.__T=reactor.callLater(self.reconnectDelay,
                                        self._connect)
 
@@ -259,13 +259,13 @@ class CAClientChannel(object):
             d, self._d = self._d, None
             d.callback(True)
 
-    def dispatch(self, pkt, peer, circuit):
+    def dispatch(self, pkt, circuit, peer=None):
         assert circuit is self._circ
         
-        hdl=self._chan.get(pkt.cmd, self._ctxt.dispatchtcp)
+        hdl=self._chan.get(pkt.cmd, self._ctxt.dispatch)
         
         if hdl:
-            hdl(pkt, peer, self)
+            hdl(pkt, circuit, peer)
         else:
             log.debug('Channel %s received unknown %s',self.name,pkt)
 

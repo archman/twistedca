@@ -13,8 +13,6 @@ from TwCA.util.ca import CAmessage, monitormask
 from TwCA.util.defs import *
 from TwCA.util.error import ECA_NORMAL, ECA_DISCONN
 
-from client import CAClientShutdown
-
 
 class CAMonitor(object):
     """A recurring data request
@@ -51,9 +49,7 @@ class CAMonitor(object):
 
         self._updates=CBManager()
 
-        self._chan._ctxt.closeList.add(self.close)
-
-        d=self._chan._eventCon
+        d=self.__D=self._chan.whenCon
         d.addCallback(self._chanOk)
 
     @property
@@ -78,16 +74,24 @@ class CAMonitor(object):
                                 p2=self.subid).pack()
             self._chan._circ.send(msg)
 
+        if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.cancel()
+            self.__D=None
+
         # any updates in the queue will be lost
         if self._chan._circ is not None:
             self._chan._circ.subscriptions.remove(self)
         self.subid=None
 
-        self._chan._ctxt.closeList.remove(self.close)
+        if self._chan.running:
+            self._chan._ctxt.closeList.remove(self.close)
 
         self._updates(None, 0, ECA_DISCONN)
 
     def _chanOk(self, chan):
+        if chan is None:
+            # channel shutdown
+            return
         assert self._chan is chan
         
         ver=chan._circ.version
@@ -113,6 +117,9 @@ class CAMonitor(object):
         chan._circ.send(msg)
         log.debug('Start monitor %s (%d)',chan.name,self.mask)
 
+        d=self.__D=self._chan.whenDis
+        d.addCallback(self._circuitLost)
+
         return chan
 
     def _circuitLost(self,_):
@@ -122,10 +129,10 @@ class CAMonitor(object):
 
         self._updates(None, 0, ECA_DISCONN)
 
-        d=self._chan._eventCon
+        d=self._chan.whenCon
         d.addCallback(self._chanOk)
 
-    def dispatch(self, pkt, peer, circuit):
+    def dispatch(self, pkt, circuit, peer=None):
         if pkt.cmd != 1:
             log.warning('Channel %s monitor ignoring pkt %s',self._chan.name,pkt)
             # wait for real reply

@@ -4,18 +4,19 @@ import logging
 log=logging.getLogger('TwCA.cac.get')
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
+from TwCA.util.idman import DeferredManager
 
 from TwCA.util.cadata import caMeta, fromstring, dbr_to_dbf
 from TwCA.util.ca import CAmessage
 from TwCA.util.defs import *
 
-from client import CAClientShutdown
-
 
 class CAGet(object):
     """A non-recuring request for data
     """
+    done=True
+    ioid=None
+    __D=None
     
     def __init__(self, channel, dbf=None, count=None,
                  meta=META.PLAIN, dbf_conv=None):
@@ -35,8 +36,6 @@ class CAGet(object):
         self._meta, self.count = meta, count
         self.dbf_conv=dbf_conv
 
-        self.done, self.ioid=True, None
-
         if dbf_conv is None and dbf is not None:
             self.meta=caMeta(dbf)
         elif dbf_conv is not None:
@@ -44,15 +43,23 @@ class CAGet(object):
         else:
             self.meta=None
 
-        self._chan._ctxt.closeList.add(self.close) #TODO: remove
-
         self.restart()
 
     def close(self):
         """Cancel request
         """
+        if self._chan is None:
+            return # already shutdown
+
         if not self.done:
             self._result.errback(CAClientShutdown('Get aborted'))
+        self.done=True
+
+        if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.cancel()
+            self.__D=None
+
+        self._chan=None
 
     def restart(self):
         """Restart request
@@ -66,9 +73,9 @@ class CAGet(object):
 
         self.done=False
 
-        self._result=Deferred()
+        self._result=DeferredManager()
 
-        d=self._chan._eventCon
+        d=self.__D=self._chan.whenCon
         d.addCallback(self._chanOk)
 
     @property
@@ -77,9 +84,13 @@ class CAGet(object):
         
         Will be called with a tuple (value array, caMeta)
         """
-        return self._result
+        return self._result.get()
 
     def _chanOk(self, chan):
+        if chan is None:
+            # channel has shutdown
+            return
+
         assert self._chan is chan
         
         ver=chan._circ.version
@@ -100,6 +111,9 @@ class CAGet(object):
                       p1=chan.sid, p2=self.ioid).pack()
         chan._circ.send(msg)
 
+        d=self.__D=self._chan.whenDis
+        d.addCallback(self._circuitLost)
+
         return chan
 
     def _circuitLost(self,_):
@@ -107,10 +121,10 @@ class CAGet(object):
         if self.done:
             return
 
-        d=self._chan._eventCon
+        d=self._chan.eventCon
         d.addCallback(self._chanOk)
 
-    def dispatch(self, pkt, peer, circuit):
+    def dispatch(self, pkt, circuit, peer=None):
         if pkt.cmd != 15:
             log.warning('Channel %s get ignoring pkt %s',self._chan.name,pkt)
             # wait for real reply
