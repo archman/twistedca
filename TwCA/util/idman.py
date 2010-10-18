@@ -60,7 +60,17 @@ class DeferredManager(set):
     def add(self,defer):
         raise NotImplementedError("Can't not add Deferreds manually")
 
+    def _cancel(self, d):
+        if d not in self:
+            raise RuntimeError('Deferred already cancelled')
+        self.remove(d)
+
     def get(self):
+        d=self._get()
+        d.cancel=lambda: self._cancel(d)
+        return d
+
+    def _get(self):
         from twisted.internet.defer import Deferred, \
                                            succeed, fail
         if self.__done:

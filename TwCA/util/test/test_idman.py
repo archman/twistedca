@@ -98,6 +98,13 @@ class TestManagers(unittest.TestCase):
 
         d.addCallback(match)
 
+        e=man.get()
+        @e.addCallback
+        def x(_):
+            C.v+=100
+
+        e.cancel()
+
         man.callback(5)
 
         self.assertEqual(C.v, 1)
