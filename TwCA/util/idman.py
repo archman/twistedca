@@ -54,8 +54,7 @@ class DeferredManager(set):
     Each requester gets a new Deferred so that
     it can be chained by its user
     """
-
-    __done=False
+    __done=None
 
     def add(self,defer):
         raise NotImplementedError("Can't not add Deferreds manually")
@@ -73,13 +72,10 @@ class DeferredManager(set):
     def _get(self):
         from twisted.internet.defer import Deferred, \
                                            succeed, fail
-        if self.__done:
-            if hasattr(self, '__result'):
-                return succeed(self.__result)
-            elif hasattr(self, '__fail'):
-                return fail(self.__fail)
-            else:
-                raise AssertionError('Logic error :()')
+        if self.__done is True:
+            return succeed(self.__result)
+        elif self.__done is False:
+            return fail(self.__fail)
 
         d=Deferred()
         set.add(self, d)
@@ -91,10 +87,10 @@ class DeferredManager(set):
             raise self.AlreadyCalledError('DeferredManager already run')
 
         self.__result=result
+        self.__done=True
         for d in self:
             d.callback(result)
 
-        self.__done=True
         self.clear()
 
     def errback(self, fail=None):
@@ -105,11 +101,11 @@ class DeferredManager(set):
         from twisted.python.failure import Failure
 
         self.__fail=fail
+        self.__done=False
         if not isinstance(fail, Failure):
-            fail = Failure(fail)
+            fail = self.__fail = Failure(fail)
         for d in self:
             d.errback(fail)
 
-        self.__done=True
         self.clear()
 
