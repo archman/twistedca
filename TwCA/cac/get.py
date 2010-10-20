@@ -87,6 +87,7 @@ class CAGet(object):
         return self._result.get()
 
     def _chanOk(self, chan):
+        self.__D=None
         if chan is None:
             # channel has shutdown
             return
@@ -117,6 +118,7 @@ class CAGet(object):
         return chan
 
     def _circuitLost(self,_):
+        self.__D=None
         self.ioid=None
         if self.done:
             return

@@ -9,7 +9,7 @@ from twisted.internet.error import ReactorNotRunning
 from twisted.internet.defer import DeferredList
 
 from TwCA import __version__ as TwCAVersion
-from TwCA.cac.client import CAClientShutdown
+from TwCA.cac.client import CAClient
 from TwCA.cac.clichannel import CAClientChannel
 from TwCA.cac.get import CAGet
 from TwCA.cac.set import CASet
@@ -61,9 +61,6 @@ logging.basicConfig(format='%(message)s',level=LVL[verb])
 
 dbr=DBR.STRING
 
-def channelCB(chan, status):
-    log.info(chan)
-
 def timeout():
     log.fatal('Timeout!')
     try:
@@ -74,7 +71,9 @@ def timeout():
 if opt.tmo >=0.00001:
     reactor.callLater(opt.tmo, timeout)
 
-chan=CAClientChannel(pv, channelCB)
+client=CAClient()
+
+chan=CAClientChannel(pv, client)
 
 
 
@@ -108,6 +107,11 @@ def finalValue((data,_)):
         print d,
     print
 
+@d.addErrback
+def oops(fail):
+    print fail
+    return fail
+
 @d.addBoth
 def stop(x):
     try:
@@ -116,7 +120,5 @@ def stop(x):
         pass
     return x
 
-# trap aborted operations
-d.addErrback(lambda x:x.trap(CAClientShutdown))
 
 reactor.run()

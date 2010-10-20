@@ -4,14 +4,12 @@ import logging
 log=logging.getLogger('TwCA.cac.set')
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
 
+from TwCA.util.idman import DeferredManager
 from TwCA.util.cadata import caMeta, tostring, dbr_to_dbf
 from TwCA.util.ca import CAmessage
 from TwCA.util.defs import *
 from TwCA.util.error import ECA_NORMAL
-
-from client import CAClientShutdown
 
 
 class CASet(object):
@@ -37,6 +35,7 @@ class CASet(object):
         self._meta, self._wait    = meta,    wait
 
         self.done, self.ioid=True, None
+        self.__D=None
 
         if dbf_conv is None and dbf is not None:
             self.meta=caMeta(dbf)
@@ -57,13 +56,22 @@ class CASet(object):
         confirmation is received depending on the type of
         write.
         """
-        return self._comp
+        return self._comp.get()
 
     def close(self):
         """Cancel the request
         """
+        if self._chan is None:
+            return # already shutdown
+
         if not self.done and self._comp:
-            self._comp.errback(CAClientShutdown('Set aborted'))
+            self._comp.callback(None)
+
+        if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.cancel()
+            self.__D=None
+
+        self._chan=None
 
     def restart(self, data):
         """Resend with new value array
@@ -74,13 +82,14 @@ class CASet(object):
 
         self.done=False
 
-        self._comp=Deferred()
+        self._comp=DeferredManager()
 
-        d=self._chan._eventCon
+        d=self.__D=self._chan.whenCon
         d.addCallback(self._chanOk)
 
     def _chanOk(self, chan):
         assert self._chan is chan
+        self.__D=None
 
         self.ioid=chan._circ.pendingActions.add(self)
 
@@ -112,22 +121,29 @@ class CASet(object):
         chan._circ.send(msg)
 
         if not self._wait:
+            log.debug('Send put request (no wait) %s',self._chan.name)
             # do completion here
             self.ioid=None
             self.done=True
             self._comp.callback(ECA_NORMAL)
 
+        else:
+            log.debug('Send put request (wait) %s',self._chan.name)
+            d=self.__D=self._chan.whenDis
+            d.addCallback(self._circuitLost)
+
         return chan
 
     def _circuitLost(self,_):
+        self.__D=None
         self.ioid=None
         if self.done:
             return
 
-        d=self._chan._eventCon
+        d=self.__D=self._chan.whenCon
         d.addCallback(self._chanOk)
 
-    def dispatch(self, pkt, peer, circuit):
+    def dispatch(self, pkt, circuit, peer=None):
         if pkt.cmd != 19:
             log.warning('Channel %s get ignoring pkt %s',self._chan.name,pkt)
             # wait for real reply

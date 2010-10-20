@@ -89,6 +89,7 @@ class CAMonitor(object):
         self._updates(None, 0, ECA_DISCONN)
 
     def _chanOk(self, chan):
+        self.__D=None
         if chan is None:
             # channel shutdown
             return
@@ -123,6 +124,7 @@ class CAMonitor(object):
         return chan
 
     def _circuitLost(self,_):
+        self.__D=None
         if self.subid is None:
             return
         self.subid=None
