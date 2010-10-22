@@ -5,6 +5,8 @@ log=logging.getLogger('TwCA.cas.server')
 from errno import EPERM, EINVAL, ENETUNREACH
 from socket import inet_aton
 
+from zope.interface import implements
+
 from twisted.internet import reactor,tcp,protocol
 from twisted.internet.task import LoopingCall
 from twisted.internet.error import CannotListenError
@@ -15,7 +17,10 @@ from TwCA.util.defs import *
 from TwCA.util.config import Config
 from TwCA.util.ifinspect import getifinfo
 
-from endpoint import UDPpeer, CAcircuit
+from TwCA.util.interfaces import IDispatch
+from interfaces import ICAServer
+
+from endpoint import UDPpeer, CAcircuit, CAServerCircuitFactory
 
 from struct import Struct
 
@@ -29,6 +34,7 @@ class Server(object):
     but it is possible to replace the Lookup()
     and GetPV() methods for different behavior.
     """
+    implements(ICAServer, IDispatch)
     
     def __init__(self, conf=Config.default,
                  pvs=[], reactor=reactor):
@@ -37,13 +43,14 @@ class Server(object):
         A Config instance is used to control which
         network interfaces and ports are used.
         """
+        self.running=True
         self.reactor=reactor
+
         self.interfaces=[] # [(TCPEndpint, UDPPeer)]
         self.sport, self.cport=conf.sport, conf.cport
 
-        self.tcpfactory=protocol.ServerFactory()
-        self.tcpfactory.protocol=CAcircuit
-        self.tcpfactory.server=self
+        self.circuits=set()
+        self.tcpfactory=CAServerCircuitFactory(self)
 
         # fill beacon address list
         self.becdests=set()
@@ -78,7 +85,7 @@ class Server(object):
             # UDP port is given the port that the TCP listener
             # is bound to.
             up=SharedUDP(conf.sport,
-                            UDPpeer(self.dispatchudp,bound.port),
+                            UDPpeer(self.dispatch, bound.port),
                             interface=bound.host,
                             reactor=reactor)
             up.startListening()
@@ -109,6 +116,10 @@ class Server(object):
         reactor.callLater(self.beaconWait,self.sendBeacon)
 
     def close(self):
+        if not self.running:
+            return
+        self.running=True
+
         from copy import copy
         # make a copy of the list (not contents)
         # because calling c() may cause the size
@@ -142,17 +153,16 @@ class Server(object):
             self.beaconWait=min(self.beaconWait*2.0, 30)
         reactor.callLater(self.beaconWait,self.sendBeacon)
 
-    def dispatchudp(self, pkt, peer, endpoint):
-        fn=self._udp.get(pkt.cmd, self.unknown)
+    def dispatch(self, pkt, endpoint, peer):
         
-        fn(pkt, peer, endpoint)
-
-    def dispatchtcp(self, pkt, peer, circuit):
-        if pkt is None:
-            return # circuit closed
-        fn=self._tcp.get(pkt.cmd, self.unknown)
+        if peer is None:
+            # TCP
+            fn=self._tcp.get(pkt.cmd, self.unknown)
+        else:
+            # UDP
+            fn=self._udp.get(pkt.cmd, self.unknown)
         
-        fn(pkt, peer, circuit)
+        fn(pkt, endpoint, peer)
 
     def ignore(*_):
         pass
@@ -160,7 +170,7 @@ class Server(object):
     def unknown(self, pkt, peer, endpoint):
         print '>> Unknown <<',peer,'sent',pkt
 
-    def nameres(self, pkt, peer, endpoint):
+    def nameres(self, pkt, endpoint, peer):
         name=pkt.body.strip('\0')
         log.info('%s is looking for %s',str(peer),name)
         ret = self.Lookup(name)

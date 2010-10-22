@@ -65,3 +65,7 @@ class TestChannelBasic(unittest.TestCase):
         d2=deferLater(reactor, 0.4, self.chan.close)
 
         return gatherResults([d, d2])
+
+    def test_noserv(self):
+        """Lookup ok, but no TCP server
+        """

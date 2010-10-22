@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import logging
+
+from zope.interface import implements
+
 from pv import CAError
+
 from TwCA.util.ca import CAmessage, padString, packCAerror, monitormask
 from TwCA.util.error import ECA_NORMAL, ECA_BADCHID
 from TwCA.util import error
 from TwCA.util.cadata import dbf_element_size
 from TwCA.util.defs import dbr_to_dbf, RIGHT
+from TwCA.util.interfaces import IDispatch
 
 log=logging.getLogger('TwCA.cas.channel')
 
@@ -15,6 +20,7 @@ class Channel(object):
     
     Instances are created by a server circuit
     """
+    implements(IDispatch)
     
     def __init__(self, sid, cid, server, circuit, pv):
         self.server, self.circuit=server, circuit
@@ -151,9 +157,9 @@ class Channel(object):
         pkt = CAmessage(cmd=1, dtype=mon.dbr, p1=self.circuit.cid, p2=mon.ioid)
         self.circuit.send(pkt.pack())
 
-    def dispatch(self, pkt, peer, circuit):
+    def dispatch(self, pkt, circuit, peer):
         
-        hdl=self._chan.get(pkt.cmd, self.server.dispatchtcp)
+        hdl=self._chan.get(pkt.cmd, self.server.dispatch)
         
         hdl(pkt, peer, self)
 
