@@ -221,7 +221,7 @@ class CACircuitFactory(ClientFactory):
         srv: tuple (host ip, port)
         persist: Make circuit persistent (auto re-connect)
         
-        Returns a tuple which is called with either an
+        Returns a Deferred() which is called with either an
         instance of CAClientcircuit or None if the server
         could not be contacted.
         """

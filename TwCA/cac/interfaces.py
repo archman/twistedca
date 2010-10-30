@@ -2,9 +2,13 @@
 
 from zope.interface import Interface, Attribute
 
-class IClient(Interface):
+from twisted.internet.interfaces import IProtocol
+
+from TwCA.util.interfaces import IDispatch
+
+class IClient(IDispatch):
     
-    def close(self):
+    def close():
         """Shutdown the client context
         
         Fail all pending operations.
@@ -13,6 +17,15 @@ class IClient(Interface):
 
     reactor = Attribute(
         "The reactor to be used by all sub-units")
+
+    user = Attribute(
+        "Username given to servers")
+
+    host = Attribute(
+        "Hostname given to servers")
+
+    closeList = Attribute(
+        "set() of callables run when the client context is destroyed")
 
     def lookup(name):
         """Request a lookup on a PV name.
@@ -33,7 +46,7 @@ class IClient(Interface):
         opened.
         """
 
-class IClientcircuit(Interface):
+class IClientcircuit(IProtocol):
     
     def addchan(channel):
         """Add a channel to this circuit
