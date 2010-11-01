@@ -3,17 +3,22 @@
 import logging
 log=logging.getLogger('TwCA.cac.get')
 
+from zope.interface import implements
+
 from twisted.internet import reactor
 from TwCA.util.idman import DeferredManager
 
 from TwCA.util.cadata import caMeta, fromstring, dbr_to_dbf
 from TwCA.util.ca import CAmessage
 from TwCA.util.defs import *
+from TwCA.util.interfaces import IDispatch
 
 
 class CAGet(object):
     """A non-recuring request for data
     """
+    implements(IDispatch)
+
     done=True
     ioid=None
     __D=None
@@ -52,8 +57,11 @@ class CAGet(object):
             return # already shutdown
 
         if not self.done:
-            self._result.errback(CAClientShutdown('Get aborted'))
+            self._result.callback(None)
         self.done=True
+
+        if self.ioid is not None and self._chan._circ is not None:
+            self._chan._circ.pendingActions.remove(self.ioid)
 
         if self.__D is not None and hasattr(self.__D, 'cancel'):
             self.__D.cancel()

@@ -4,7 +4,7 @@ from zope.interface import Interface, Attribute
 
 from twisted.internet.interfaces import IProtocol
 
-from TwCA.util.interfaces import IDispatch
+from TwCA.util.interfaces import IDispatch, IConnectNotify
 
 class IClient(IDispatch):
     
@@ -46,8 +46,29 @@ class IClient(IDispatch):
         opened.
         """
 
+class IChannel(IDispatch, IConnectNotify):
+
+    name=Attribute("PV name")
+    dbr=Attribute("Native type")
+    maxcount=Attribute("Max element count")
+    sid=Attribute("Server's resource ID#")
+    cid=Attribute("Client's resource ID#")
+
+    _circ=Attribute("An object implementing IClientcircuit")
+
 class IClientcircuit(IProtocol):
-    
+
+    pendingActions=Attribute("""An IDManager which maps
+            action ID# to object where the objects implement
+            IDispatch
+            """)
+
+    subscriptions=Attribute("""An IDManager which maps subscription
+            ID# to objects which implements IDispatch
+            """)
+
+    version=Attribute("Negotiated protocol version")
+
     def addchan(channel):
         """Add a channel to this circuit
         """
