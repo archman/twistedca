@@ -108,6 +108,8 @@ def data(data, mask, status, pv, cls):
     print printTime(meta.stamp),
     for v in value:
         print v,
+    if meta.severity is not SEVERITY.NO_ALARM:
+        print meta.severity,meta.status,
     print
 
 def stop():
