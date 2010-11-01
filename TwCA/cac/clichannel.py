@@ -20,7 +20,7 @@ class CAClientChannel(object):
     
     Handles lookups and (re)connection.
     """
-    implements(IClientcircuit, IDispatch, IConnectNotify)
+    implements(IDispatch, IConnectNotify)
 
     S_init='Disconnected'
     S_lookup='PV lookup'
@@ -40,7 +40,7 @@ class CAClientChannel(object):
 
         self._connected=False # True, False, or None (shutdown)
 
-        self._status=CBManager() # connection status callback
+        self.status=CBManager() # connection status callback
 
         self.__eventCon=DeferredManager()
         self.__eventDis=DeferredManager()
@@ -110,7 +110,7 @@ class CAClientChannel(object):
         if self._connected is True:
             # _d is cleared before _connected is True
             assert self._d is None
-            self._status(self, False)
+            self.status(self, False)
 
         elif self._d:
             d, self._d = self._d, None
@@ -180,24 +180,27 @@ class CAClientChannel(object):
 
         log.debug('Attaching %s to %s',self.name,circ)
 
-        circ.addchan(self)
-        self._circ=circ
+        # the circuit is passed only if in the connected state
+        # but it can drop at any time
+        d=circ.transport.connector.whenDis
+        d.addCallback(self._circuitLost)
 
         self._d=Deferred()
-        
+
+        self._circ=circ
+        circ.addchan(self)
+
         conn=yield self._d
 
         assert self._d is None, '_d must be None before callback'
 
         if conn is None:
             # Server died while we were attaching
-            self._reset()
             return
 
         elif conn is False:
             # channel not present on server
             log.info('channel %s rejected by server', self.name)
-            self._reset()
             return
 
         log.debug('Channel %s Open',self.name)
@@ -208,21 +211,11 @@ class CAClientChannel(object):
         self.__eventCon.callback(self)
         self._connected=True
 
-        self._status(self, True)
-        
-        d=circ.transport.connector.whenDis
-        d.addCallback(self._circuitLost)
+        self.status(self, True)
 
     def _circuitLost(self,_):
         log.debug('Channel %s lost circuit',self.name)
-        if self._d:
-            d, self._d = self._d, None
-            d.callback(None)
-            self._circ=None
-            # _connect() will reset
-
-        else:
-            self._reset()
+        self._reset()
 
     def _disconn(self, pkt, peer, circuit):
         """Server has stopped providing the channel
@@ -239,10 +232,10 @@ class CAClientChannel(object):
     def _channelFail(self, pkt, peer, circuit):
         log.info('Server %s rejects channel %s',peer,self.name)
         
-        self._reset()
         if self._d:
             d, self._d = self._d, None
             d.callback(False)
+        self._reset()
 
     def _rights(self, pkt, peer, circuit):
         self.rights=pkt.p2
