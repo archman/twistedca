@@ -8,9 +8,9 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
-from twisted.internet.defer import Deferred, succeed
 
 from TwCA.util.config import Config
+from TwCA.util.idman import DeferredManager
 
 from TwCA.util.interfaces import IDispatch
 from interfaces import IClient
@@ -41,7 +41,7 @@ class CAClient(object):
         self.circuits=CACircuitFactory(self)
         
         self.resolv=Resolver(self.circuits, conf)
-        self.closeList=set()
+        self._onClose=DeferredManager()
 
         if host is None:
             from socket import gethostname
@@ -54,6 +54,10 @@ class CAClient(object):
         self.user=user
 
         reactor.addSystemEventTrigger("before", "shutdown", self.close)
+
+    @property
+    def onClose(self):
+        return self._onClose.get()
 
     def close(self):
         """Stop a client context.
@@ -69,8 +73,7 @@ class CAClient(object):
 
         self.running=False
 
-        for c in copy(self.closeList):
-            c()
+        self.onClose.callback(self)
 
         d=self.resolv.close()
 

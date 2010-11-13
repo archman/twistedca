@@ -24,8 +24,8 @@ class IClient(IDispatch):
     host = Attribute(
         "Hostname given to servers")
 
-    closeList = Attribute(
-        "set() of callables run when the client context is destroyed")
+    onClose = Attribute(
+        "A Deferred() triggered when the client context is closed")
 
     def lookup(name):
         """Request a lookup on a PV name.

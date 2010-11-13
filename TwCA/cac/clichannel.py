@@ -6,14 +6,14 @@ log=logging.getLogger('TwCA.cac.clichannel')
 from zope.interface import implements
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, succeed, inlineCallbacks
+from twisted.internet.defer import Deferred, succeed, \
+                                   CancelledError
 
 from TwCA.util.idman import DeferredManager, CBManager
 from TwCA.util.interfaces import IDispatch
 from TwCA.util.interfaces import IConnectNotify
 
 from interfaces import IClientcircuit
-from client import CAClient
 
 class CAClientChannel(object):
     """Persistent Client Channel
@@ -46,6 +46,9 @@ class CAClientChannel(object):
         self.__eventDis=DeferredManager()
         self.__eventDis.callback(self) # initially disconnected
 
+        # Stores a deferred from the client during
+        # name and circuit lookup phases
+        self.__L=None
         # used to store a deferred during the attach phase
         self._d=None
         
@@ -57,7 +60,8 @@ class CAClientChannel(object):
                     27:self._disconn,
                    }
 
-        self._ctxt.closeList.add(self.close) #TODO: remove
+        self.__Done=self._ctxt.onClose
+        self.__Done.addCallback(lambda _:self.close())
 
         self._reset()
 
@@ -78,6 +82,10 @@ class CAClientChannel(object):
         if self._connected is None:
             # shutdown already happened
             return
+        log.debug('Channel %s close',self.name)
+
+        self.__Done.cancel()
+        self.__Done.addErrback(lambda e:e.trap(CancelledError))
 
         self._reset()
 
@@ -116,6 +124,11 @@ class CAClientChannel(object):
             d, self._d = self._d, None
             d.callback(None)
 
+        if self.__L is not None:
+            self.__L.addErrback(lambda e:e.trap(CancelledError))
+            self.__L.cancel()
+            self.__L=None
+
         self.cid=self.sid=self.dbr=None
         self._circ=None
         self.maxcount=self.rights=0
@@ -143,7 +156,6 @@ class CAClientChannel(object):
         """
         return self._connected is not None
 
-    @inlineCallbacks
     def _connect(self):
         """Start channel connection sequence
 
@@ -153,7 +165,7 @@ class CAClientChannel(object):
         """
         assert self._connected is False and self.state is self.S_init
 
-        # prevent error when cancelling
+        # prevent error when cancelling.
         # _connect is invoked when __T expires
         self.__T=None
 
@@ -161,57 +173,69 @@ class CAClientChannel(object):
 
         self.state=self.S_lookup
 
-        srv=yield self._ctxt.lookup(self.name)
-        if srv is None:
-            # lookups only fail when the client is shutting down
-            return
+        self.__L=self._ctxt.lookup(self.name)
+        self.__L.pause()
+        @self.__L.addCallback
+        def doneLookup(srv):
+            if srv is None:
+                # lookups only fail when the client is shutting down
+                return
 
-        self.state=self.S_waitcirc
+            self.state=self.S_waitcirc
 
-        log.debug('Found %s on %s',self.name,srv)
-            
-        circ=yield self._ctxt.openCircuit(srv)
-        if circ is None:
-            # couldn't connect to server
-            self._reset()
-            return
+            log.debug('Found %s on %s',self.name,srv)
 
-        self.state=self.S_attach
+            return self._ctxt.openCircuit(srv)
 
-        log.debug('Attaching %s to %s',self.name,circ)
+        @self.__L.addCallback
+        def haveCircuit(circ):
+            self.__L=None
+            if circ is None:
+                # couldn't connect to server
+                self._reset()
+                return
 
-        # the circuit is passed only if in the connected state
-        # but it can drop at any time
-        d=circ.transport.connector.whenDis
-        d.addCallback(self._circuitLost)
+            self.state=self.S_attach
 
-        self._d=Deferred()
+            log.debug('Attaching %s to %s',self.name,circ)
 
-        self._circ=circ
-        circ.addchan(self)
+            # the circuit is passed only if in the connected state
+            # but it can drop at any time
+            d=circ.transport.connector.whenDis
+            d.addCallback(self._circuitLost)
 
-        conn=yield self._d
+            self._d=Deferred()
 
-        assert self._d is None, '_d must be None before callback'
+            self._circ=circ
+            circ.addchan(self)
 
-        if conn is None:
-            # Server died while we were attaching
-            return
+            return self._d
 
-        elif conn is False:
-            # channel not present on server
-            log.info('channel %s rejected by server', self.name)
-            return
+        @self.__L.addCallback
+        def attached(conn):
+            assert self._d is None, '_d must be None before callback'
 
-        log.debug('Channel %s Open',self.name)
+            if conn is None:
+                # Server died while we were attaching
+                return
 
-        self.state=self.S_connect
+            elif conn is False:
+                # channel not present on server
+                log.info('channel %s rejected by server', self.name)
+                return
 
-        self.__eventDis=DeferredManager()
-        self.__eventCon.callback(self)
-        self._connected=True
+            log.debug('Channel %s Open',self.name)
 
-        self.status(self, True)
+            self.state=self.S_connect
+
+            self.__eventDis=DeferredManager()
+            self.__eventCon.callback(self)
+            self._connected=True
+
+            self.status(self, True)
+
+        self.__L.unpause()
+        return self.__L
 
     def _circuitLost(self,_):
         log.debug('Channel %s lost circuit',self.name)
@@ -231,7 +255,7 @@ class CAClientChannel(object):
 
     def _channelFail(self, pkt, peer, circuit):
         log.info('Server %s rejects channel %s',peer,self.name)
-        
+
         if self._d:
             d, self._d = self._d, None
             d.callback(False)
