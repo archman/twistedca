@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from weakref import ref
+
 from twisted.trial import unittest
-from twisted.internet.defer import gatherResults
+from twisted.internet.defer import gatherResults, CancelledError
 
 from TwCA.util.idman import *
  
@@ -102,8 +104,12 @@ class TestManagers(unittest.TestCase):
         @e.addCallback
         def x(_):
             C.v+=100
+        @e.addErrback
+        def E(err):
+            err.trap(CancelledError)
 
         e.cancel()
+        self.assertNotIn(e, man)
 
         man.callback(5)
 
@@ -140,3 +146,42 @@ class TestManagers(unittest.TestCase):
             self.assertEqual(fail.trap(RuntimeError), RuntimeError)
 
         self.assertEqual(C.v, 2)
+
+    def test_defmanagerRefs(self):
+        """Check that deferred manager doesn't keep references
+        """
+
+        man=DeferredManager()
+
+        class X(object):
+            v=None
+            def assign(self,x):
+                self.v=x
+
+        x=X()
+        check=ref(x)
+
+        d=man.get()
+        d.addCallback(x.assign)
+        d.addErrback(lambda e:e.trap(CancelledError))
+
+        del x
+        self.assertTrue(check() is not None)
+
+        d.cancel()
+
+        self.assertTrue(check() is None)
+
+        y=X()
+        check=ref(y)
+
+        e=man.get()
+        e.addCallback(y.assign)
+
+        del y
+        self.assertTrue(check() is not None)
+
+        man.callback(0)
+
+        self.assertTrue(check() is None)
+
