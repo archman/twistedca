@@ -6,6 +6,7 @@ log=logging.getLogger('TwCA.cac.get')
 from zope.interface import implements
 
 from twisted.internet import reactor
+from twisted.internet.defer import CancelledError
 from TwCA.util.idman import DeferredManager
 
 from TwCA.util.cadata import caMeta, fromstring, dbr_to_dbf
@@ -64,6 +65,7 @@ class CAGet(object):
             self._chan._circ.pendingActions.remove(self.ioid)
 
         if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.addErrback(lambda e:e.trap(CancelledError))
             self.__D.cancel()
             self.__D=None
 

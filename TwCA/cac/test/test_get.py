@@ -2,6 +2,7 @@
 
 #import logging
 #logging.basicConfig(format='%(message)s',level=logging.DEBUG)
+from weakref import ref
 
 from twisted.internet import reactor
 
@@ -19,7 +20,7 @@ from twisted.internet.protocol import ServerFactory
 
 from TwCA.util.defs import *
 from TwCA.util.ca import CAmessage, padString, searchbody
-from TwCA.util.idman import IDManager
+from TwCA.util.idman import IDManager, DeferredManager
 
 from TwCA.cac.interfaces import IChannel, IClientcircuit
 from TwCA.util.interfaces import IConnectNotify
@@ -57,23 +58,28 @@ class MockChannel(object):
     sid=cid=maxcount=0
 
     def __init__(self):
-        self.whenCon=Deferred()
-        self.whenDis=Deferred()
-        self.whenDis.callback(None)
+        self._C=DeferredManager()
+        self._D=DeferredManager()
+        self._D.callback(None)
+
+    @property
+    def whenCon(self):
+        return self._C.get()
+    @property
+    def whenDis(self):
+        return self._D.get()
 
     def doCon(self):
-        self.whenDis=Deferred()
-        self.whenCon.callback(self)
+        self._D=DeferredManager()
+        self._C.callback(self)
 
     def doFail(self):
-        d, self.whenCon = self.whenCon, Deferred()
+        d, self._C = self._C, DeferredManager()
         d.callback(None)
 
     def doLost(self):
-        self.whenCon=Deferred()
-        d, self.whenDis = self.whenDis, Deferred()
-        if circ is not None:
-            d.callback(self)
+        self._C=DeferredManager()
+        d, self._D = self._D, DeferredManager()
 
 class TestGet(unittest.TestCase):
 
@@ -88,14 +94,17 @@ class TestGet(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'get'):
             self.get.close()
+            del self.get
+        if hasattr(self, 'check'):
+            # Ensure no remaining references
+            self.assertTrue(self.check() is None)
 
     def test_noop(self):
         """Setup and tear down without running reactor.
         """
-        from weakref import ref
 
         self.get=CAGet(self.chan)
-        check=ref(self.get)
+        self.check=ref(self.get)
 
         # circuit not connected
         self.assertEqual(len(self.chan._circ.pendingActions), 0)
@@ -105,16 +114,13 @@ class TestGet(unittest.TestCase):
         self.assertEqual(len(self.chan._circ.pendingActions), 0)
 
         del self.get
-        # Ensure no remaining references
-        self.assertTrue(check() is None)
 
-    def test_cancel(self):
+    def test_cancellive(self):
         """Connect but cancel after data request sent
         """
-        from weakref import ref
 
         g=self.get=CAGet(self.chan)
-        check=ref(self.get)
+        self.check=ref(self.get)
 
         self.chan.doCon()
         self.assertEqual(len(self.chan._circ._sent), 1)
@@ -131,10 +137,25 @@ class TestGet(unittest.TestCase):
 
         self.get.close()
 
-        self.assertEqual(len(self.chan._circ.pendingActions), 0)
-        self.assertTrue(len(self.chan.whenCon.callbacks), 0)
-        self.assertTrue(len(self.chan.whenDis.callbacks), 0)
+        del self.get
+
+    def test_canceldead(self):
+        """Connect, lose connection, cancel
+        """
+
+        g=self.get=CAGet(self.chan)
+        self.check=ref(self.get)
+
+        self.chan.doCon()
+        pkt,_=self.chan._circ._sent.pop(0)
+        self.assertEqual(len(pkt), 16)
+        pkt,extra=CAmessage.unpack(pkt)
+
+        self.assertEqual(extra, '')
+        self.assertEqual(pkt.cmd, 15)
+
+        self.chan.doLost()
+
+        self.get.close()
 
         del self.get
-        # Ensure no remaining references
-        self.assertTrue(check() is None)
