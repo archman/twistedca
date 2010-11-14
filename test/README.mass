@@ -1,0 +1,12 @@
+
+= Massive client test
+
+Monitor a large number of counter PVs updating at 10Hz.
+
+$ ./mass.sh 1000
+$ softIoc mass.cmd
+
+In another console
+
+$ ./mass.py -N 1000
+

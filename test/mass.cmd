@@ -1,0 +1,2 @@
+dbLoadTemplate("mass.template")
+iocInit()
