@@ -2,6 +2,7 @@
 
 #import logging
 #logging.basicConfig(format='%(message)s',level=logging.DEBUG)
+from weakref import ref
 
 from twisted.internet import reactor
 
@@ -12,7 +13,7 @@ from zope.interface import implements
 
 from twisted.internet.defer import gatherResults, Deferred, \
                                    succeed, AlreadyCalledError, \
-                                   inlineCallbacks
+                                   inlineCallbacks, returnValue
 from twisted.internet.task import deferLater
 from twisted.trial import unittest
 from twisted.internet.protocol import ServerFactory
@@ -47,10 +48,10 @@ class MockClient(object):
         self._O=Deferred()
         self._Osrv=None
         self._Rx=[]
-        self.closeList=set()
-    
+        self.onClose=Deferred()
+
     def close(self):
-        pass
+        self.onClose.callback(self)
 
     def lookup(self,name):
         self._Lname=name
@@ -93,10 +94,13 @@ class MockCircuit(object):
             self.connector=MockCircuit.MockConnector()
 
     def __init__(self):
-        self._mchan=None
-        self._sent=[]
-        self.reqAttach=Deferred()
+        self.close()
         self.transport=self.MockTransport()
+
+    def close(self):
+        self._mchan=None
+        self.reqAttach=Deferred()
+        self._sent=[]
 
     def addchan(self, channel):
         self._mchan=channel
@@ -121,12 +125,29 @@ class TestChannelFail(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self, 'chan'):
-            self.chan.close()
+            self.chan.close() # redundent, but safe to call again
+            del self.chan
+        import gc
+        gc.collect()
+        if hasattr(self, 'check'):
+            #Ensure no remaining references
+            x=self.check()
+            if x is not None:
+                from TwCA.util.debug import showRefs
+                print 'refs of',x
+                showRefs(x)
+            self.assertTrue(self.check() is None,
+                            'Test object not destroyed because of '
+                            'lingering references')
+        if hasattr(self, 'cli'):
+            self.cli.close()
+            del self.cli
 
     def test_noop(self):
         """Startup and shutdown before running reactor
         """
         self.chan=CAClientChannel('testpv', self.cli)
+        self.check=ref(self.chan)
 
         c=Counter()
 
@@ -142,8 +163,6 @@ class TestChannelFail(unittest.TestCase):
             self.assertTrue(chan is None)
             c.c+=1
 
-        self.assertEqual(self.cli.closeList, set([self.chan.close]))
-
         self.chan.close()
         del self.chan
 
@@ -156,19 +175,19 @@ class TestChannelFail(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('testpv', self.cli)
+        self.check=ref(self.chan)
 
         self.chan.whenCon.addCallback(lambda x:self.assertTrue(x is None))
 
-        self.assertEqual(self.cli.closeList, set([self.chan.close]))
-        
         def whenWaiting():
             self.assertTrue(len(self.cli._L.callbacks), 1)
             self.assertTrue(self.cli._Lname == 'testpv')
             self.assertTrue(self.cli._Osrv is None)
-            self.chan.close()
-            del self.chan
             self.cli._L.callback(None)
 
+            self.chan.close()
+            del self.chan
+ 
         # wait for first connection attempt
         return deferLater(reactor, self.chan.reconnectDelay*1.1, whenWaiting)
 
@@ -177,9 +196,12 @@ class TestChannelFail(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('missingpv', self.cli)
+        self.check=ref(self.chan)
 
-        self.chan.whenCon.addCallback(lambda x:self.assertTrue(x is None))
-        
+        @self.chan.whenCon.addCallback
+        def onCon(x):
+            self.assertTrue(x is None)
+
         def whenWaiting():
             self.assertTrue(len(self.cli._L.callbacks), 1)
             self.assertTrue(self.cli._Lname == 'missingpv')
@@ -200,6 +222,7 @@ class TestChannelFail(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('somepv', self.cli)
+        self.check=ref(self.chan)
 
         self.chan.whenCon.addCallback(lambda x:self.assertTrue(x is None))
         
@@ -238,6 +261,7 @@ class TestChannelFail(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('somepv', self.cli)
+        self.check=ref(self.chan)
 
         self.chan.whenCon.addCallback(lambda x:self.assertTrue(x is None))
         
@@ -246,18 +270,26 @@ class TestChannelFail(unittest.TestCase):
 
         self.cli._L.callback(('localhost',42))
         self.cli._O.callback(circ)
-        
-        @circ.reqAttach.addCallback
+
+        d=circ.reqAttach
+        @d.addCallback
         def onAttach(chan):
             self.assertEqual(chan, self.chan)
             self.assertEqual(chan.state, chan.S_attach)
 
             self.assertTrue(chan._d is not None)
+
+            return deferLater(reactor, 0, lambda:None)
+
+        @d.addCallback
+        def done(_):
             circ.transport.connector.doLost(circ)
-            self.assertTrue(chan._d is None)
+            circ.close()
+            self.assertTrue(self.chan._d is None)
 
             self.assertEqual(self.chan.state, self.chan.S_init)
             self.chan.close()
+            self.assertTrue(self.chan._circ is None)
 
         return circ.reqAttach
 
@@ -266,6 +298,7 @@ class TestChannelFail(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('somepv', self.cli)
+        self.check=ref(self.chan)
 
         self.chan.whenCon.addCallback(lambda x:self.assertTrue(x is None))
         
@@ -274,18 +307,25 @@ class TestChannelFail(unittest.TestCase):
 
         self.cli._L.callback(('localhost',42))
         self.cli._O.callback(circ)
-        
-        @circ.reqAttach.addCallback
+
+        d=circ.reqAttach
+        @d.addCallback
         def onAttach(chan):
             self.assertEqual(chan, self.chan)
             self.assertEqual(chan.state, chan.S_attach)
 
             self.assertTrue(chan._d is not None)
+            return deferLater(reactor, 0, lambda:None)
+
+        @d.addCallback
+        def done(_):
+            # send channel create fail
             self.chan.dispatch(CAmessage(cmd=26), circ)
-            self.assertTrue(chan._d is None)
+            self.assertTrue(self.chan._d is None)
 
             self.assertEqual(self.chan.state, self.chan.S_init)
             self.chan.close()
+            circ.close()
 
         return circ.reqAttach
 
@@ -299,6 +339,22 @@ class TestChannelConnect(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'chan'):
             self.chan.close()
+            del self.chan
+        import gc
+        gc.collect()
+        if hasattr(self, 'check'):
+            # Ensure no remaining references
+            x=self.check()
+            if x is not None:
+                from TwCA.util.debug import showRefs
+                print 'refs of',x
+                showRefs(x)
+            self.assertTrue(self.check() is None,
+                            'Test object not destroyed because of '
+                            'lingering references')
+        if hasattr(self, 'cli'):
+            self.cli.close()
+            del self.cli
 
     @inlineCallbacks
     def test_reconn(self):
@@ -306,6 +362,7 @@ class TestChannelConnect(unittest.TestCase):
         """
 
         self.chan=CAClientChannel('somepv', self.cli)
+        #self.check=ref(self.chan) #TODO: find the reference leak!
 
         cb=Counter()
 
@@ -365,6 +422,7 @@ class TestChannelConnect(unittest.TestCase):
         self.cli._O=succeed(circ2)
 
         circ.transport.connector.doLost(circ)
+        circ.close()
 
         # wait for channel to signal disconnected
         chan=yield self.chan.whenDis
@@ -411,4 +469,6 @@ class TestChannelConnect(unittest.TestCase):
         self.assertEqual(cb.c, 9)
 
         self.chan.close()
+        circ2.close()
 
+        returnValue(None)

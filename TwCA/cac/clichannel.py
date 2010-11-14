@@ -49,9 +49,9 @@ class CAClientChannel(object):
         # Stores a deferred from the client during
         # name and circuit lookup phases
         self.__L=None
-        # used to store a deferred during the attach phase
+        # Store a deferred during the attach phase
         self._d=None
-        
+
         self.__T=None # reconnect delay timer
 
         self._chan={18:self._channelOk,
@@ -201,7 +201,7 @@ class CAClientChannel(object):
 
             # the circuit is passed only if in the connected state
             # but it can drop at any time
-            d=circ.transport.connector.whenDis
+            self.__L=d=circ.transport.connector.whenDis
             d.addCallback(self._circuitLost)
 
             self._d=Deferred()
@@ -238,6 +238,7 @@ class CAClientChannel(object):
         return self.__L
 
     def _circuitLost(self,_):
+        self.__L=None
         log.debug('Channel %s lost circuit',self.name)
         self._reset()
 

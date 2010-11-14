@@ -95,6 +95,8 @@ class TestGet(unittest.TestCase):
         if hasattr(self, 'get'):
             self.get.close()
             del self.get
+        import gc
+        gc.collect()
         if hasattr(self, 'check'):
             # Ensure no remaining references
             self.assertTrue(self.check() is None)
