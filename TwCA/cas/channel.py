@@ -4,6 +4,8 @@ import logging
 
 from zope.interface import implements
 
+from twisted.internet.defer import CancelledError
+
 from pv import CAError
 
 from TwCA.util.ca import CAmessage, padString, packCAerror, monitormask
@@ -36,24 +38,38 @@ class Channel(object):
 
         self.rights=pv.rights(self)
 
-        # inform circuit
-        self.circuit.closeList.add(self.close)
+        self.__D=self.circuit.whenCon
+        self.__D.addCallback(self._onCon)
 
         # inform PV
         self.pv.connect(self)
         log.debug('Create %s',self)
+
+    def _onCon(self, circ):
+        assert circ is self.circuit
+        self.__D=self.circuit.whenDis
+        self.__D.addCallback(self._onDis)
+
+    def _onDis(self, circ):
+        assert circ is self.circuit
+        self.__D=self.circuit.whenCon
+        self.__D.addCallback(self._onCon)
 
     def close(self, connected=False):
         """Called when the client closes the channel
         """
         log.debug('Destroy %s',self)
         self.pv.disconnect(self)
-        
+
+        if self.__D is not None:
+            self.__D.addErrback(lambda e:e.trap(CancelledError))
+            self.__D.cancel()
+            self.__D=None
+
         if connected:
             pkt = CAmessage(cmd=27, p1=self.cid)
             self.circuit.send(pkt.pack())
 
-        self.circuit.closeList.remove(self.close)
         self.circuit.dropchan(self)
 
     def post(self, mask):
