@@ -138,6 +138,8 @@ class CAMonitor(object):
             chan._circ.pendingActions[self.subid]=self
             return
 
+        pkt.check() # check that dtype*count is consistent with message size
+
         data = fromstring(pkt.body, pkt.dtype, pkt.count, self.meta)
 
         self._updates(data, self.mask, pkt.p1)

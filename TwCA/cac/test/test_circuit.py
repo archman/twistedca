@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+#import logging
+#logging.basicConfig(format='%(message)s',level=logging.DEBUG)
 from twisted.internet import reactor
 
 #from twisted.internet.base import DelayedCall
@@ -29,7 +31,7 @@ class CAExpectFactory(ServerFactory):
     halt=False
     
     def buildProtocol(self, _):
-        return self.protocol(self.tst, self.program, self.halt)
+        return self.protocol(self.tst, self.program, self.halt, debug=False)
 
 class TestCircuit(unittest.TestCase):
     

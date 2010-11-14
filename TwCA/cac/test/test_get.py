@@ -132,7 +132,7 @@ class TestGet(unittest.TestCase):
         self.assertEqual(len(pkt), 16)
         pkt,extra=CAmessage.unpack(pkt)
 
-        self.assertEqual(extra, '')
+        self.assertEqual(len(extra), 0)
         self.assertEqual(pkt.cmd, 15)
         self.assertEqual(pkt.p1, self.chan.sid)
         self.assertIn(pkt.p2, self.chan._circ.pendingActions)
@@ -153,7 +153,7 @@ class TestGet(unittest.TestCase):
         self.assertEqual(len(pkt), 16)
         pkt,extra=CAmessage.unpack(pkt)
 
-        self.assertEqual(extra, '')
+        self.assertEqual(len(extra), 0)
         self.assertEqual(pkt.cmd, 15)
 
         self.chan.doLost()

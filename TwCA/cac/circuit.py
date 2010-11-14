@@ -10,7 +10,7 @@ from twisted.internet.protocol import Protocol, ClientFactory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.tcp import Connector
 
-from TwCA.util.ca import CAmessage, padString
+from TwCA.util.ca import CAmessage, padString, CAIncomplete
 from TwCA.util import defs
 from TwCA.util.idman import IDManager
 from TwCA.util.twistedhelper import DeferredConnector
@@ -156,8 +156,11 @@ class CAClientcircuit(Protocol):
         msg=self.in_buffer+msg
 
         while msg is not None and len(msg)>=16:
-        
-            pkt, msg = CAmessage.unpack(msg)
+
+            try:
+                pkt, msg = CAmessage.unpack(msg)
+            except CAIncomplete:
+                break
             
             hdl = self._circ.get(pkt.cmd, self.client.dispatch)
 
@@ -169,7 +172,7 @@ class CAClientcircuit(Protocol):
                 self.transport.loseConnection()
                 return
 
-        self.in_buffer=msg # save remaining
+        self.in_buffer=str(msg) # save remaining
 
     def __str__(self):
         return 'Client Circuit v4%(version)d to %(peer)s'% \

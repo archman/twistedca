@@ -98,12 +98,11 @@ class CAProtocol(Protocol):
         while msg is not None and len(msg)>=16:
         
             pkt, msg = CAmessage.unpack(msg)
-            
             hdl = self._dispatch_table.get(pkt.cmd, self._dispatch_default)
         
             hdl(pkt, self)
 
-        self.__in_buffer=msg # save remaining
+        self.__in_buffer=str(msg) # save remaining
 
     _dispatch_table=None
     _dispatch_default=_unknown_action
@@ -130,12 +129,11 @@ class CADatagramProtocol(DatagramProtocol):
     _dispatch_table=None
     _dispatch_default=_unknown_action
 
-class CAExpectMixen(object):
-    debug=False
-    
-    def __init__(self, tst, program, halt=True):
+class CAExpectMixen(object):    
+    def __init__(self, tst, program, halt=True, debug=False):
         self.tst, self.program=tst, program
         self.halt=halt
+        self.debug=debug
         
         self._dispatch_table={}
         self.done=Deferred()
@@ -151,16 +149,16 @@ class CAExpectMixen(object):
         cmd, epkt = self.program.pop(0)
         self.tst.assertEqual(cmd, 'recv')
         
+        if self.debug:
+            print 'Rx',pkt
+        
         self.tst.assertEqual(pkt.cmd,  epkt.cmd)
         self.tst.assertEqual(pkt.size, epkt.size)
         self.tst.assertEqual(pkt.dtype,epkt.dtype)
         self.tst.assertEqual(pkt.count,epkt.count)
         self.tst.assertEqual(pkt.p1,   epkt.p1)
         self.tst.assertEqual(pkt.p2,   epkt.p2)
-        self.tst.assertEqual(pkt.body ,epkt.body)
-        
-        if self.debug:
-            print 'Rx',pkt
+        self.tst.assertEqual(pkt.body ,buffer(epkt.body))
         
         self.send()
 
