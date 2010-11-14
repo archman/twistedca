@@ -8,6 +8,7 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
+from twisted.internet.defer import succeed
 
 from TwCA.util.config import Config
 from TwCA.util.idman import DeferredManager
