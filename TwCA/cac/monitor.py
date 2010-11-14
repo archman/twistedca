@@ -40,13 +40,6 @@ class CAMonitor(object):
 
         self.subid=None
 
-        if dbf_conv is None and dbf is not None:
-            self.meta=caMeta(dbf)
-        elif dbf_conv is not None:
-            self.meta=caMeta(dbf_conv)
-        else:
-            self.meta=None
-
         self._updates=CBManager()
 
         d=self.__D=self._chan.whenCon
@@ -100,8 +93,13 @@ class CAMonitor(object):
 
         dbf=self.dbf
         if dbf is None:
-            dbf,_=dbr_to_dbf(chan.dbr)
-        dbr=dbf_to_dbr(dbf, self._meta)
+            self.dbf,_=dbr_to_dbf(chan.dbr)
+        dbr=dbf_to_dbr(self.dbf, self._meta)
+
+        if self.dbf_conv is None:
+            self.meta=caMeta(self.dbf)
+        else:
+            self.meta=caMeta(dbf_conv)
 
         # use dynamic array length whenever possible
         cnt=self.count if ver<13 else 0
@@ -140,12 +138,7 @@ class CAMonitor(object):
             chan._circ.pendingActions[self.subid]=self
             return
 
-        meta=self.meta
-        if meta is None:
-            dbf,_=dbr_to_dbf(pkt.dtype)
-            meta=caMeta(dbf)
-
-        data = fromstring(pkt.body, pkt.dtype, pkt.count, meta)
+        data = fromstring(pkt.body, pkt.dtype, pkt.count, self.meta)
 
         self._updates(data, self.mask, pkt.p1)
 
