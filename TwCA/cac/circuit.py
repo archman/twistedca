@@ -160,8 +160,14 @@ class CAClientcircuit(Protocol):
             pkt, msg = CAmessage.unpack(msg)
             
             hdl = self._circ.get(pkt.cmd, self.client.dispatch)
-        
-            hdl(pkt, self)
+
+            try:
+                hdl(pkt, self)
+            except:
+                # this is usually a alignment error when the socket buffer overflows
+                log.warning('Processing error, circuit reset (%d)', pkt.cmd)
+                self.transport.loseConnection()
+                return
 
         self.in_buffer=msg # save remaining
 
