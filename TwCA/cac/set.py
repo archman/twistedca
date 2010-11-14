@@ -4,6 +4,7 @@ import logging
 log=logging.getLogger('TwCA.cac.set')
 
 from twisted.internet import reactor
+from twisted.internet.defer import CancelledError
 
 from TwCA.util.idman import DeferredManager
 from TwCA.util.cadata import caMeta, tostring, dbr_to_dbf
@@ -44,8 +45,6 @@ class CASet(object):
         else:
             self.meta=None
 
-        self._chan._ctxt.closeList.add(self.close) #TODO: remove
-
         self.restart(data)
 
     @property
@@ -68,6 +67,7 @@ class CASet(object):
             self._comp.callback(None)
 
         if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.addErrback(lambda e:e.trap(CancelledError))
             self.__D.cancel()
             self.__D=None
 
@@ -88,8 +88,12 @@ class CASet(object):
         d.addCallback(self._chanOk)
 
     def _chanOk(self, chan):
-        assert self._chan is chan
         self.__D=None
+        if chan is None:
+            self.close()
+            # channel has shutdown
+            return
+        assert self._chan is chan
 
         self.ioid=chan._circ.pendingActions.add(self)
 

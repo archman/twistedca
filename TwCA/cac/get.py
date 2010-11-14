@@ -100,6 +100,7 @@ class CAGet(object):
         self.__D=None
         if chan is None:
             # channel has shutdown
+            self.close()
             return
 
         assert self._chan is chan

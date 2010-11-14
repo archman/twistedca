@@ -5,7 +5,7 @@ log=logging.getLogger('TwCA.cac.monitor')
 from copy import copy
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, CancelledError
 
 from TwCA.util.idman import CBManager
 from TwCA.util.cadata import caMeta, fromstring, dbr_to_dbf
@@ -75,6 +75,7 @@ class CAMonitor(object):
             self._chan._circ.send(msg)
 
         if self.__D is not None and hasattr(self.__D, 'cancel'):
+            self.__D.addErrback(lambda e:e.trap(CancelledError))
             self.__D.cancel()
             self.__D=None
 
@@ -83,14 +84,12 @@ class CAMonitor(object):
             self._chan._circ.subscriptions.remove(self)
         self.subid=None
 
-        if self._chan.running:
-            self._chan._ctxt.closeList.remove(self.close)
-
         self._updates(None, 0, ECA_DISCONN)
 
     def _chanOk(self, chan):
         self.__D=None
         if chan is None:
+            self.close()
             # channel shutdown
             return
         assert self._chan is chan
