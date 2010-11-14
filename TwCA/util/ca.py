@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from struct import Struct
+from cadata import padString, dbr_data_size
 
 __all__ = ['CAmessage', 'packSearchBody']
 
@@ -12,13 +13,6 @@ searchbody=Struct('!Hxxxxxx')
 monitormask=Struct('!xxxxxxxxxxxxHxx')
 
 packSearchBody=searchbody.pack
-
-def padString(inp):
-    assert isinstance(inp, str)
-    p=len(inp)%8
-    if p!=0:
-        inp=inp+'\0'*(8-p)
-    return inp
 
 def packCAerror(cid, sts, msg, pkt):
     body=pkt.pack()+padString(msg)

@@ -8,12 +8,18 @@ from array import array
 from struct import Struct
 from time import time
 
-from ca import padString
 from defs import *
 from convert import dbr_convert_value, dbr_convert_meta_value
 from copy import copy
 
 __all__ = ['caMeta', 'caMetaProxy', 'tostring','fromstring']
+
+def padString(inp):
+    assert isinstance(inp, str)
+    p=len(inp)%8
+    if p!=0:
+        inp=inp+'\0'*(8-p)
+    return inp
 
 ETEST=array('H',[0x1234])
 BIGENDIAN=ETEST.tostring()[0]=='\x12'
@@ -170,6 +176,19 @@ def dbr_meta(dbr):
     Returns: (converter obj, meta-parts bitmask)
     """
     return _dbr_meta[dbr]
+
+_dbr_meta_size=dict([ (dbr, struct.size) for dbr, (struct,_) in _dbr_meta.iteritems()])
+# Meta data size
+dbr_meta_size=_dbr_meta_size.get
+
+def dbr_data_size(dbr, count):
+    dbf, _=dbr_to_dbf(dbr)
+    V=_dbf_element_size[dbf]*count
+    V+=_dbr_meta_size[dbr]
+    if V%8==0:
+        return V
+    else:
+        return V+8-V%8
 
 _default={DBF.STRING:'',
           DBF.INT   :0,

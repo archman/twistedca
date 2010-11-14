@@ -45,7 +45,16 @@ class TestSerialize(unittest.TestCase):
         self.assertEqual(len(y), len(raw))
         self.assertEqual(y, raw)
 
-        
+    def test_sizes(self):
+        for dbr,cnt,exp in [(defs.DBR.INT, 2,        0 + 2*2+ 4), # 4 bytes pad
+                            (defs.DBR.LONG, 2,       0 + 2*4+ 0),
+                            (defs.DBR.STS_LONG, 2,   4 + 2*4+ 4),
+                            (defs.DBR.TIME_DOUBLE,2, 16+ 2*8+ 0),
+                            (defs.DBR.GR_LONG, 2,    36+ 2*4+ 4),
+                            (defs.DBR.GR_ENUM, 2,   422+ 2*2+ 6),
+                           ]:
+            act=cadata.dbr_data_size(dbr, cnt)
+            self.assertEqual(act, exp, '%s %d should be %d, but is %d'%(dbr,cnt,exp,act))
 
 class TestConvert(unittest.TestCase):
 
