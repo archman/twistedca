@@ -67,14 +67,14 @@ class CASet(object):
             self._comp.callback(None)
 
         if self.__D is not None and hasattr(self.__D, 'cancel'):
-            self.__D.addErrback(lambda e:e.trap(CancelledError))
-            self.__D.cancel()
-            self.__D=None
+            d,  self.__D = self.__D,  None
+            d.addErrback(lambda e:e.trap(CancelledError))
+            d.cancel()
 
         self._chan=None
 
     def restart(self, data):
-        """Resend with new value array
+        """Re-send with new value array
         """
         if not self.done:
             raise RuntimeError('Previous Set not complete')

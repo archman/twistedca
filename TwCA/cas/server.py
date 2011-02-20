@@ -171,7 +171,7 @@ class Server(object):
         print '>> Unknown <<',peer,'sent',pkt
 
     def nameres(self, pkt, endpoint, peer):
-        name=pkt.body.strip('\0')
+        name=str(pkt.body).strip('\0')
         log.info('%s is looking for %s',str(peer),name)
         ret = self.Lookup(name)
         if isinstance(ret, tuple) and pkt.count<11:

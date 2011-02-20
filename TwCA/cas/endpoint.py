@@ -73,11 +73,11 @@ class CAcircuit(Protocol):
         log.debug('Version %s',self)
 
     def caclient(self, pkt, x, y):
-        self.user=pkt.body.strip('\0')
+        self.user=str(pkt.body).strip('\0')
         log.debug('Update %s',self)
 
     def cahost(self, pkt, x, y):
-        self.host=pkt.body.strip('\0')
+        self.host=str(pkt.body).strip('\0')
         # do reverse lookup
         host, aliases, z = socket.gethostbyaddr(self.peer.host)
         if self.host!=host and self.host not in aliases:
@@ -91,7 +91,7 @@ class CAcircuit(Protocol):
         # Older clients first report version here
         self.version=pkt.p2
 
-        name=pkt.body.strip('\0')
+        name=str(pkt.body).strip('\0')
         pv = self.server.GetPV(name)
 
         if pv is None:

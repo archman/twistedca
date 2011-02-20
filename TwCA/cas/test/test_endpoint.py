@@ -49,6 +49,9 @@ class TestFactory(CAServerCircuitFactory):
         return p
 
 def hookAction(d, k, key):
+    """Wrap a function object found in a dictionary
+    New function calls the old then triggers a deferred action
+    """
     defer=Deferred()
     old=d[k]
     def act(*args, **kws):
@@ -59,6 +62,9 @@ def hookAction(d, k, key):
     return defer
 
 def insertAction(d, k, val):
+    """Add a function to an object found in a dictionary
+    New function just triggers a deferred action
+    """
     defer=Deferred()
     def act(*args, **kws):
         defer.callback((val,args,kws))
