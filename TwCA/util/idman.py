@@ -3,7 +3,7 @@
 """A variety of containers which are more aware of their contents
 """
 
-from twisted.internet.defer import Deferred, CancelledError
+from twisted.internet.defer import Deferred
 
 __all__ = ['IDManager',
            'CBManager',
@@ -49,7 +49,6 @@ class CBManager(dict):
         self.pop(cb)
 
     def __call__(self, *args, **kwargs):
-        from copy import copy
         for cb,(a,kw) in self.iteritems():
             k=kwargs.copy()
             k.update(kw)
@@ -72,8 +71,7 @@ class DeferredManager(set):
         self.remove(d)
 
     def get(self):
-        from twisted.internet.defer import Deferred, \
-                                           succeed, fail
+        from twisted.internet.defer import succeed, fail
         if self.__done is True:
             return succeed(self.__result)
         elif self.__done is False:
@@ -89,7 +87,7 @@ class DeferredManager(set):
     def callback(self, result):
         if self.__done:
             from twisted.internet.defer import AlreadyCalledError
-            raise self.AlreadyCalledError('DeferredManager already run')
+            raise AlreadyCalledError('DeferredManager already run')
 
         self.__result=result
         self.__done=True
@@ -101,7 +99,7 @@ class DeferredManager(set):
     def errback(self, fail=None):
         if self.__done:
             from twisted.internet.defer import AlreadyCalledError
-            raise self.AlreadyCalledError('DeferredManager already run')
+            raise AlreadyCalledError('DeferredManager already run')
         
         from twisted.python.failure import Failure
 
