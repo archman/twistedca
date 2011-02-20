@@ -37,7 +37,7 @@ class TestClientBasic(unittest.TestCase):
 
         return cli.close()
 
-class TestClientBasic(unittest.TestCase):
+class TestClientCircuit(unittest.TestCase):
     
     timeout=2
     
