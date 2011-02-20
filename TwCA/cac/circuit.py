@@ -86,8 +86,8 @@ class CAClientcircuit(Protocol):
         log.debug('Version %s',self)
         
         if self.readyWait is not None:
-            self.readyWait.cancel()
-            self.readyWait=None
+            W,  self.readyWait = self.readyWait,  None
+            W.cancel()
             self.circuitReady()
 
     def ping(self, pkt, _):

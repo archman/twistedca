@@ -46,16 +46,16 @@ class Request(object):
 
     def received(self, srv):
         if self.T is not None:
-            self.T.cancel()
-            self.T=None
+            T,  self.T = self.T,  None
+            T.cancel()
             self.d.callback(srv)
 
     def cancel(self):
         if self.T is None:
             return
             
-        self.T.cancel()
-        self.T=None
+        T,  self.T = self.T,  None
+        T.cancel()
 
         # once the manager is informed future requests
         # for this name will result in a new request
