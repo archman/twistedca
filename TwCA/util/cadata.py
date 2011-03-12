@@ -12,7 +12,9 @@ from defs import *
 from convert import dbr_convert_value, dbr_convert_meta_value
 from copy import copy
 
-__all__ = ['caMeta', 'caMetaProxy', 'tostring','fromstring']
+__all__ = ['caMeta', 'caMetaProxy',
+    'tostring','fromstring', 
+    'printMeta']
 
 def padString(inp):
     assert isinstance(inp, str)
@@ -239,6 +241,22 @@ class caMetaProxy(object):
         object.__setattr__(self, name, val)
 
 class caMeta(object):
+    """Represents the meta-information associated with a DBR value.
+    This includes alarm status/severity, as well as other types.
+    The parameters given to the constructor can also be accessed
+    as data members.
+    
+    :param same_as_value dbf: The field type
+    :param str units: engineering units
+    :param float stamp: Time in seconds since the POSIX epoch
+    :param int status: Alarm status
+    :param int severity: Alarm severity
+    :param int precision: Display precision for fractional numbers
+    :param tuple display: Display limits (Low, High)
+    :param tuple warning: Display limits (Low, High)
+    :param tuple alarm: Display limits (Low, High)
+    :param tuple control: Display limits (Low, High)
+    """
     def __init__(self, dbf, units='', stamp=0.0,
                        status=0, severity=0, precision=0,
                        **kwargs):
@@ -254,6 +272,8 @@ class caMeta(object):
 
     @property
     def ro(self):
+        """Is this meta object read-only?
+        """
         return False
 
     @property
@@ -274,6 +294,12 @@ class caMeta(object):
         return True
 
 def printMeta(meta, cls):
+    """Return a text representation of a :class:`caMeta` object
+    
+    :param meta: :class:`caMeta` instance
+    :param cls: Which parts of the meta data to print
+    :rtype: str
+    """
     dbr=dbf_to_dbr(meta.dbf, cls)
 
     # Use the meta de/encoder mask
@@ -314,6 +340,14 @@ def printMeta(meta, cls):
 
 
 def tostring(value, meta, dbr, count):
+    """Serialize value and meta data to wire format
+
+    :param value: The Data.  Should be a list of array
+    :param meta: the :class:`caMeta` storing the meta info for value.
+    :param dbr: Serialize to this DBR type
+    :param count: Use the first count number of elements of value.
+    :rtype: str (byte string)
+    """
     dbf, metacls = dbr_to_dbf(dbr)
 
     # value converters
@@ -365,6 +399,17 @@ def tostring(value, meta, dbr, count):
     return (padString(metadata+data), len(value[:count]))
 
 def fromstring(raw, dbr, count, meta):
+    """Deserialize a byte string according to the DBR type
+    and meta class provided.
+
+    The meta argument supplies extra information needed to decode the value.
+    
+    :param raw: DBR data payload
+    :param dbr: DBR type from packet
+    :param count: Element count from packet
+    :param meta: Input :class:`caMeta`
+    :rtype: tuple.  (value, :class:`caMeta`)
+    """
     dbf, metacls = dbr_to_dbf(dbr)
     rmeta=copy(meta)
 

@@ -9,14 +9,24 @@ network interfaces
 import sys, logging, socket
 log=logging.getLogger('TwCA.util.ifinspect')
 
-__all__=['getifinfo']
+__all__=['getifinfo',  'interface']
 
 
 class interface(object):
+    """Holds information about a network interface.
+    """
+    #: Interface name string (eg 'eth0')
     name=None
+    #: Type of socket to use with this interface.
+    #: Currently always AF_INET, but this may change.
     family=socket.AF_INET
+    #: Interface network address as a string.
+    #: For IPv4 addresses this is a dotted quad like '10.0.100.4'.
     addr=None
+    #: None unless the interface supports broadcasts, then the broadcast
+    #: address as a string.
     broadcast=None
+    #: Is this the loopback inteface?
     loopback=None
 
     def __str__(self):
@@ -41,6 +51,9 @@ global ifinfo
 ifinfo=None
 
 def getifinfo(rebuild=False):
+    """Returns a :class:`set` of :class:`interface` objects
+    based on information collected from the host system.
+    """
     global ifinfo
     if ifinfo is None or rebuild:
 

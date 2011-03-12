@@ -40,6 +40,8 @@ class INTERFACE_INFO(Structure):
 assert sizeof(INTERFACE_INFO)==76
 
 def win32():
+    """Query interfaces
+    """
     infolist=(INTERFACE_INFO*10)()
 
     a = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

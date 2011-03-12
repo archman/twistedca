@@ -39,6 +39,8 @@ else:
         return cstruct.from_buffer_copy(buffer(string))
 
 def unix():
+    """Query interfaces
+    """
     
     SIOCGIFCONF   =0x8912
     SIOCGIFFLAGS  =0x8913
