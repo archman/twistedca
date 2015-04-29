@@ -368,7 +368,7 @@ def tostring(value, meta, dbr, count):
     if mmask&METAPARTS.TIME:
         s=int(meta.stamp)-POSIX_TIME_AT_EPICS_EPOCH
         ns=int((meta.stamp%1)*1e9)
-        mlist+=[s,ns]
+        mlist+=[max(0,s),ns]
     
     if mmask&METAPARTS.REAL:
         mlist.append(meta.precision)
